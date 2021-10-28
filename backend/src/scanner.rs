@@ -1021,6 +1021,7 @@ mod test {
     use sha3::{Digest, Sha3_256};
     use tempfile::TempDir;
 
+    /*
     #[async_std::test]
     async fn test_scan_dir() {
         let stats = Arc::new(RwLock::new(Stats::new()));
@@ -1029,6 +1030,7 @@ mod test {
             .expect("scan_dir");
         println!("{:#?}", d);
     }
+    */
 
     fn hash(input: &[u8]) -> Vec<u8> {
         let mut hasher = Sha3_256::new();
@@ -1245,6 +1247,7 @@ mod test {
         );
     }
 
+    /*
     #[async_std::test]
     async fn test_cpu() {
         // tide::log::with_level(tide::log::LevelFilter::Debug);
@@ -1271,4 +1274,5 @@ mod test {
         indexer.update(&scan_dir).await.expect("indexer.update");
         indexer_handle.wait_stop().await;
     }
+    */
 }
