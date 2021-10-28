@@ -1,0 +1,132 @@
+/* Style customization */
+:root {
+  --bg-color: #282828; /* background */
+  --bg-secondary-color: #B0DEFF; /* folder */
+  --color-primary: #e07493; /* font A */
+  --color-lightGrey: #3f4144;
+  --color-grey: #747681;
+  --color-darkGrey: #d2d6dd; /* tabs */
+  --color-error: #d43939;
+  --color-success: #28bd14;
+  --grid-maxWidth: 180rem;
+  --grid-gutter: 2rem;
+  --font-size: 1.6rem;
+  --font-color: #FFF1E9; /* font B */ /* label */
+  --font-family-sans: sans-serif;
+  --font-family-mono: monospace;
+}
+
+/* Custom styles */
+
+.square {
+  aspect-ratio: 1;
+  width: 100%;
+}
+.thumb {
+  margin: auto auto;
+  display: flex;
+  border-radius: 0.2em;
+  max-height: 100%;
+  /* Vertical align */
+  position: relative;
+  top: 50%;
+  -webkit-transform: translateY(-50%);
+  -ms-transform: translateY(-50%);
+  transform: translateY(-50%);
+}
+.image {
+  border: 0.1em solid #fff;
+  /*border: 0.1em solid var(--font-color);
+  padding: 0.2em;*/
+}
+.folder {
+  padding: 0.3em;
+  background-color: var(--bg-secondary-color);
+  color: var(--bg-color);
+  height: 100%;
+  word-break: break-all;
+  white-space: pre-wrap;
+}
+.folderlabel {
+  padding: 0 0.3em;
+  position: absolute;
+  color: var(--font-color);
+  -webkit-text-stroke: 0.3em var(--color-lightGrey);
+  paint-order: stroke fill;
+}
+.folderimg {
+  min-height:100%;
+  min-width: 100%;
+  object-fit: cover;
+  border-radius: 0.2em;
+}
+.grow {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  width: 100%;
+  align-items: center;
+  aspect-ratio: 8;
+  padding: 0.4em 0em;
+
+  flex-direction: row;
+  margin-left: -1.0rem;
+  width: calc(100% + 2.0rem);
+}
+.grow .gcol {
+  display: block;
+  flex: 1 1 auto;
+  margin-left: 0;
+  max-width: 100%;
+  height: 100%;
+  width: 100%;
+  aspect-ratio: 1;
+
+  margin-bottom: inherit;
+  padding: 0 1.0rem;
+}
+.vcenter {
+  display: flex;
+  position: relative;
+  top: 50%;
+  transform: translateY(-50%);
+  /*align-items:center;
+  display:flex;*/
+}
+.imgcontainer {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100vw;
+  height: calc(100vh - 5.2em);
+}
+.imgbar {
+  width: 100%;
+  height: 98%;
+}
+.imgview {
+  display: block;
+  height: 100%;
+  margin: auto;
+  object-fit: contain;
+}
+.caption {
+  display: flex;
+  justify-content: center;
+  padding: 0.2em 0 0.2em 0;
+  position:relative;
+}
+.label {
+  padding: 1rem 1rem;
+  color: var(--color-lightGrey);
+  background: var(--color-darkGrey);
+  border-radius: 4px;
+  border: 1px solid transparent;
+  font-size: var(--font-size);
+  line-height: 1;
+  text-align: center;
+  transition: opacity 0.2s ease;
+  text-decoration: none;
+  transform: scale(1);
+  display: inline-block;
+}

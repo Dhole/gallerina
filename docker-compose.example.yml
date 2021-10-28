@@ -1,0 +1,19 @@
+version: "3"
+
+services:
+  gallerina:
+    image: dhole1/gallerina:latest
+    restart: always
+    init: true
+    ports:
+      # Choose the port where the http server will be exposed.
+      - 8888:8080
+    environment:
+      # Choose a different value to limit the number of threads for thumbnail
+      # creation.  0 will default to the number of CPU cores detected.
+      - GALLERINA_THREADS=0
+    volumes:
+      # Choose a folder where the database will be stored.
+      - /path/to/database:/app/db:delegated
+      # Set the folder where your media is.
+      - /path/to/media:/app/media:ro
