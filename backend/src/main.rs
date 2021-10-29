@@ -6,6 +6,7 @@ use structopt::StructOpt;
 use tide::security::{CorsMiddleware, Origin};
 
 mod exif;
+mod magick;
 mod models;
 mod routes;
 mod scanner;
