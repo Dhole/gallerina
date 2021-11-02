@@ -34,6 +34,7 @@ use crate::state::Storage;
 
 pub const THUMB_SIZE: u16 = 512;
 pub const THUMB_QUALITY: u8 = 80;
+pub const MAX_SQL_TX_SIZE: usize = 1024;
 
 #[derive(Debug)]
 pub enum ScanError {
@@ -569,6 +570,119 @@ struct Indexer {
     thumbs_res: (Sender<IndexRequest>, Receiver<IndexRequest>),
 }
 
+type Tx = sqlx::Transaction<'static, sqlx::Sqlite>;
+
+#[derive(Debug)]
+struct Batch<'a> {
+    max: usize,
+    count: usize,
+    db: &'a sqlx::SqlitePool,
+    tx: Tx,
+}
+
+impl<'a> Batch<'a> {
+    pub async fn new(max: usize, db: &'a sqlx::SqlitePool) -> Result<Batch<'a>, sqlx::Error> {
+        let tx = db.begin().await?;
+        Ok(Self {
+            max,
+            count: 0,
+            db: db,
+            tx,
+        })
+    }
+
+    // pub async fn tx(&'a mut self) -> Result<&'a mut Tx, sqlx::Error> {
+    //     self.count += 1;
+    //     if self.count >= self.max {
+    //         self.commit_begin().await?;
+    //     }
+    //     Ok(&mut self.tx)
+    // }
+
+    async fn inc_maybe_commit_begin(&mut self) -> Result<(), sqlx::Error> {
+        self.count += 1;
+        if self.count >= self.max {
+            let tx = std::mem::replace(&mut self.tx, self.db.begin().await?);
+            tx.commit().await?;
+            self.count = 0;
+        }
+        Ok(())
+    }
+
+    pub async fn commit(self) -> Result<(), sqlx::Error> {
+        self.tx.commit().await?;
+        Ok(())
+    }
+}
+
+// use core::pin::Pin;
+use either::Either;
+use futures_core::future::BoxFuture;
+use futures_core::stream::BoxStream;
+// use futures_core::Stream;
+use async_stream::stream;
+use futures::SinkExt;
+use sqlx::sqlite::{SqliteQueryResult, SqliteRow, SqliteStatement, SqliteTypeInfo};
+use sqlx::Describe;
+use sqlx::Execute;
+
+// use std::alloc::Global;
+
+impl<'c> sqlx::Executor<'c> for &'c mut Batch<'_> {
+    type Database = sqlx::Sqlite;
+    fn fetch_many<'e, 'q: 'e, E: 'q>(
+        self,
+        mut query: E,
+    ) -> BoxStream<'e, Result<Either<SqliteQueryResult, SqliteRow>, sqlx::Error>>
+    where
+        'c: 'e,
+        E: Execute<'q, Self::Database>,
+    {
+        Box::pin(stream! {
+                self.inc_maybe_commit_begin().await?;
+                for await value in self.tx.fetch_many(query) {
+                    yield value;
+                }
+        })
+    }
+
+    fn fetch_optional<'e, 'q: 'e, E: 'q>(
+        self,
+        mut query: E,
+    ) -> BoxFuture<'e, Result<Option<SqliteRow>, sqlx::Error>>
+    where
+        'c: 'e,
+        E: Execute<'q, Self::Database>,
+    {
+        Box::pin(async move {
+            self.inc_maybe_commit_begin().await?;
+            self.tx.fetch_optional(query).await
+        })
+    }
+
+    fn prepare_with<'e, 'q: 'e>(
+        self,
+        sql: &'q str,
+        _parameters: &'e [SqliteTypeInfo],
+    ) -> BoxFuture<'e, Result<SqliteStatement<'q>, sqlx::Error>>
+    where
+        'c: 'e,
+    {
+        self.tx.prepare_with(sql, _parameters)
+    }
+
+    #[doc(hidden)]
+    fn describe<'e, 'q: 'e>(
+        self,
+        sql: &'q str,
+    ) -> BoxFuture<'e, Result<Describe<sqlx::Sqlite>, sqlx::Error>>
+    where
+        'c: 'e,
+    {
+        self.tx.describe(sql)
+    }
+}
+
 impl Indexer {
     pub fn start(
         state: Storage,
@@ -579,6 +693,7 @@ impl Indexer {
         let thumbs_res = channel::bounded(n_threads);
         let pool_gen_thumbs = ThreadPoolBuilder::new()
             .pool_size(n_threads)
+            .name_prefix("thumb-")
             .create()
             .expect("ThreadPool create");
         let stop = Arc::new(RwLock::new(false));
@@ -698,7 +813,8 @@ impl Indexer {
             }
             wtxn.commit()?;
         }
-        let mut tx = state.db.begin().await?;
+        // let mut tx = state.db.begin().await?;
+        let mut batch = Batch::new(MAX_SQL_TX_SIZE, &state.db).await?;
         for entry in &res.new {
             if *stop.read().await {
                 return Ok(());
@@ -712,7 +828,7 @@ impl Indexer {
             .bind(&media.dir)
             .bind(media.mtime)
             .bind(media.timestamp)
-            .execute(&mut tx)
+            .execute(&mut batch)
             .await?;
         }
         for entry in &res.update {
@@ -724,10 +840,10 @@ impl Indexer {
                 .bind(media.mtime)
                 .bind(media.timestamp)
                 .bind(&media.path)
-                .execute(&mut tx)
+                .execute(&mut batch)
                 .await?;
         }
-        tx.commit().await?;
+        batch.commit().await?;
         stats.write().await.scan_files_count += res.new.len() + res.update.len();
         Ok(())
     }
@@ -763,7 +879,7 @@ impl Indexer {
         let subdirs_cmp = compare_entries(&scan_subdirs, &db_subdirs);
 
         // new_dirs -> create SQL in folder
-        let mut tx = self.state.db.begin().await?;
+        let mut batch = Batch::new(MAX_SQL_TX_SIZE, &self.state.db).await?;
         for name in &subdirs_cmp.new {
             let mtime = *(scan_subdirs.get(name).expect("key found"));
             sqlx::query("INSERT INTO folder (path, name, dir, mtime) VALUES (?, ?, ?, ?)")
@@ -771,7 +887,7 @@ impl Indexer {
                 .bind(name)
                 .bind(path_string)
                 .bind(mtime)
-                .execute(&mut tx)
+                .execute(&mut batch)
                 .await?;
         }
         // update_dirs -> update SQL in folder
@@ -780,7 +896,7 @@ impl Indexer {
             sqlx::query("UPDATE folder SET mtime = ? WHERE path = ?")
                 .bind(mtime)
                 .bind(&*subpath(&path, name).to_string_lossy())
-                .execute(&mut tx)
+                .execute(&mut batch)
                 .await?;
         }
         // del_dirs -> del SQL in folder + del dir in path SQL in folder + del dir in path SQL in
@@ -790,18 +906,18 @@ impl Indexer {
             let del_path_str = &*del_path.to_string_lossy();
             sqlx::query("DELETE FROM image WHERE dir LIKE ?")
                 .bind(format!("{}%", del_path_str))
-                .execute(&mut tx)
+                .execute(&mut batch)
                 .await?;
             sqlx::query("DELETE FROM folder WHERE dir LIKE ?")
                 .bind(format!("{}%", del_path_str))
-                .execute(&mut tx)
+                .execute(&mut batch)
                 .await?;
             sqlx::query("DELETE FROM folder WHERE path = ?")
                 .bind(del_path_str)
-                .execute(&mut tx)
+                .execute(&mut batch)
                 .await?;
         }
-        tx.commit().await?;
+        batch.commit().await?;
 
         {
             let mut wtxn = self.state.thumb_db_env.write_txn()?;
@@ -847,14 +963,14 @@ impl Indexer {
         // del_files = db_files - scan_dir.files
 
         // del_files -> del thumb + del SQL in image
-        let mut tx = self.state.db.begin().await?;
+        let mut batch = Batch::new(MAX_SQL_TX_SIZE, &self.state.db).await?;
         for name in &files_cmp.del {
             sqlx::query("DELETE FROM image WHERE path = ?")
                 .bind(&*subpath(&path, name).to_string_lossy())
-                .execute(&mut tx)
+                .execute(&mut batch)
                 .await?;
         }
-        tx.commit().await?;
+        batch.commit().await?;
 
         {
             let mut wtxn = self.state.thumb_db_env.write_txn()?;
@@ -1136,6 +1252,7 @@ mod test {
     #[async_std::test]
     async fn test_update() {
         // tide::log::with_level(tide::log::LevelFilter::Debug);
+        env_logger::init();
 
         let temp_dir = TempDir::new().expect("new temp_dir");
         let mut path_sqlite = PathBuf::from(temp_dir.path());

@@ -1,6 +1,18 @@
-FROM rust:1.56-alpine as build-rust
+FROM rust:1.56-bullseye as build-rust
+
+RUN apt-get update \
+ && apt-get -y install curl build-essential clang pkg-config libjpeg-turbo-progs libpng-dev libssl-dev
+
+ENV MAGICK_VERSION 7.1
+
+WORKDIR /magick
+RUN curl https://download.imagemagick.org/ImageMagick/download/ImageMagick.tar.gz | tar xz \
+ && cd ImageMagick-${MAGICK_VERSION}* \
+ && ./configure --with-magick-plus-plus=no --with-perl=no \
+ && make \
+ && make install
+
 WORKDIR /backend
-RUN apk add musl-dev openssl-dev
 COPY backend .
 RUN cargo build --release
 
@@ -11,7 +23,24 @@ RUN npm install
 COPY front .
 RUN npm run build
 
-FROM alpine:3.14
+FROM debian:bullseye-slim
+
+RUN apt-get update \
+ && apt-get -y install libx11-6 libgomp1 libjbig0 liblcms2-2 libtiff5 \
+                       liblqr-1-0 libpng16-16 libdjvulibre21 libfontconfig1 \
+                       libwebpmux3 libwebpdemux2 libxext6  libopenexr25 \
+                       libopenjp2-7 libssl1.1 \
+ && rm -rfv /var/lib/apt/lists/*
+COPY --from=build-rust /usr/local/lib /usr/local/lib
+ENV LD_LIBRARY_PATH=/usr/local/lib
+# WORKDIR /magick
+# COPY --from=build-rust /magick /magick
+# RUN cd ImageMagick-${MAGICK_VERSION}* \
+#  && make install
+# RUN rm -r ImageMagick-${MAGICK_VERSION}*
+# RUN apt-get remove -y build-essential \
+#  && apt-get autoremove -y
+
 WORKDIR /app
 COPY --from=build-rust /backend/target/release/backend gallerina
 COPY --from=build-node /frontend/public static
