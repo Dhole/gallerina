@@ -451,8 +451,13 @@ impl MediaThumb {
 }
 
 struct IndexRequest {
-    new: Vec<MediaThumb>,
-    update: Vec<MediaThumb>,
+    dir: PathBuf,
+    dirs_new: Vec<(String, i64)>,
+    dirs_update: Vec<(String, i64)>,
+    dirs_del: Vec<String>,
+    media_new: Vec<MediaThumb>,
+    media_update: Vec<MediaThumb>,
+    media_del: Vec<String>,
 }
 
 fn compare_entries<'a>(
@@ -746,7 +751,7 @@ impl Indexer {
     ) {
         debug!("gen_thumbs {} started", id);
         while let Ok(mut res) = thumbs_req_receiver.recv().await {
-            for entry in res.new.iter_mut().chain(res.update.iter_mut()) {
+            for entry in res.media_new.iter_mut().chain(res.media_update.iter_mut()) {
                 if *stop.read().await {
                     break;
                 }
@@ -806,16 +811,64 @@ impl Indexer {
     ) -> Result<(), ScanError> {
         {
             let mut wtxn = state.thumb_db_env.write_txn()?;
-            for entry in res.new.iter().chain(res.update.iter()) {
+            for entry in res.media_new.iter().chain(res.media_update.iter()) {
                 if let Some(thumb) = &entry.thumb {
                     state.thumb_db.put(&mut wtxn, &entry.media.path, thumb)?;
                 }
             }
             wtxn.commit()?;
         }
-        // let mut tx = state.db.begin().await?;
+
+        let dir_str = &*res.dir.to_string_lossy();
         let mut batch = Batch::new(MAX_SQL_TX_SIZE, &state.db).await?;
-        for entry in &res.new {
+        // let mut tx = state.db.begin().await?;
+
+        // new_dirs -> create SQL in folder
+        for (name, mtime) in &res.dirs_new {
+            sqlx::query("INSERT INTO folder (path, name, dir, mtime) VALUES (?, ?, ?, ?)")
+                .bind(&*subpath(&res.dir, name).to_string_lossy())
+                .bind(name)
+                .bind(dir_str)
+                .bind(mtime)
+                .execute(&mut batch)
+                .await?;
+        }
+        // update_dirs -> update SQL in folder
+        for (name, mtime) in &res.dirs_update {
+            sqlx::query("UPDATE folder SET mtime = ? WHERE path = ?")
+                .bind(mtime)
+                .bind(&*subpath(&res.dir, name).to_string_lossy())
+                .execute(&mut batch)
+                .await?;
+        }
+        // del_dirs -> del SQL in folder + del dir in path SQL in folder + del dir in path SQL in
+        // folder & thumb
+        for name in &res.dirs_del {
+            let del_path = subpath(&res.dir, name);
+            let del_path_str = &*del_path.to_string_lossy();
+            sqlx::query("DELETE FROM image WHERE dir LIKE ?")
+                .bind(format!("{}%", del_path_str))
+                .execute(&mut batch)
+                .await?;
+            sqlx::query("DELETE FROM folder WHERE dir LIKE ?")
+                .bind(format!("{}%", del_path_str))
+                .execute(&mut batch)
+                .await?;
+            sqlx::query("DELETE FROM folder WHERE path = ?")
+                .bind(del_path_str)
+                .execute(&mut batch)
+                .await?;
+        }
+
+        // del_files -> del thumb + del SQL in image
+        for name in &res.media_del {
+            sqlx::query("DELETE FROM image WHERE path = ?")
+                .bind(&name)
+                .execute(&mut batch)
+                .await?;
+        }
+
+        for entry in &res.media_new {
             if *stop.read().await {
                 return Ok(());
             }
@@ -831,7 +884,7 @@ impl Indexer {
             .execute(&mut batch)
             .await?;
         }
-        for entry in &res.update {
+        for entry in &res.media_update {
             if *stop.read().await {
                 return Ok(());
             }
@@ -844,7 +897,7 @@ impl Indexer {
                 .await?;
         }
         batch.commit().await?;
-        stats.write().await.scan_files_count += res.new.len() + res.update.len();
+        stats.write().await.scan_files_count += res.media_new.len() + res.media_update.len();
         Ok(())
     }
 
@@ -877,47 +930,6 @@ impl Indexer {
             .map(|v| (v.name.as_str(), v.mtime))
             .collect();
         let subdirs_cmp = compare_entries(&scan_subdirs, &db_subdirs);
-
-        // new_dirs -> create SQL in folder
-        let mut batch = Batch::new(MAX_SQL_TX_SIZE, &self.state.db).await?;
-        for name in &subdirs_cmp.new {
-            let mtime = *(scan_subdirs.get(name).expect("key found"));
-            sqlx::query("INSERT INTO folder (path, name, dir, mtime) VALUES (?, ?, ?, ?)")
-                .bind(&*subpath(&path, name).to_string_lossy())
-                .bind(name)
-                .bind(path_string)
-                .bind(mtime)
-                .execute(&mut batch)
-                .await?;
-        }
-        // update_dirs -> update SQL in folder
-        for name in &subdirs_cmp.update {
-            let mtime = *(scan_subdirs.get(name).expect("key found"));
-            sqlx::query("UPDATE folder SET mtime = ? WHERE path = ?")
-                .bind(mtime)
-                .bind(&*subpath(&path, name).to_string_lossy())
-                .execute(&mut batch)
-                .await?;
-        }
-        // del_dirs -> del SQL in folder + del dir in path SQL in folder + del dir in path SQL in
-        // folder & thumb
-        for name in &subdirs_cmp.del {
-            let del_path = subpath(&path, name);
-            let del_path_str = &*del_path.to_string_lossy();
-            sqlx::query("DELETE FROM image WHERE dir LIKE ?")
-                .bind(format!("{}%", del_path_str))
-                .execute(&mut batch)
-                .await?;
-            sqlx::query("DELETE FROM folder WHERE dir LIKE ?")
-                .bind(format!("{}%", del_path_str))
-                .execute(&mut batch)
-                .await?;
-            sqlx::query("DELETE FROM folder WHERE path = ?")
-                .bind(del_path_str)
-                .execute(&mut batch)
-                .await?;
-        }
-        batch.commit().await?;
 
         {
             let mut wtxn = self.state.thumb_db_env.write_txn()?;
@@ -962,16 +974,6 @@ impl Indexer {
         // update_files = scan_dir.files & db_files WHERE scandir_file.mtime != db_file.mtime
         // del_files = db_files - scan_dir.files
 
-        // del_files -> del thumb + del SQL in image
-        let mut batch = Batch::new(MAX_SQL_TX_SIZE, &self.state.db).await?;
-        for name in &files_cmp.del {
-            sqlx::query("DELETE FROM image WHERE path = ?")
-                .bind(&*subpath(&path, name).to_string_lossy())
-                .execute(&mut batch)
-                .await?;
-        }
-        batch.commit().await?;
-
         {
             let mut wtxn = self.state.thumb_db_env.write_txn()?;
             for name in &files_cmp.del {
@@ -985,14 +987,45 @@ impl Indexer {
         // new_files -> gen thumb + set thumb + create SQL in image
         // update_files -> gen thumb + set thumb + update SQL in image
         let index_req = IndexRequest {
-            new: files_cmp
+            dir: path.clone(),
+            dirs_new: subdirs_cmp
+                .new
+                .iter()
+                .map(|name| {
+                    (
+                        name.to_string(),
+                        *(scan_subdirs.get(name).expect("key found")),
+                    )
+                })
+                .collect(),
+            dirs_update: subdirs_cmp
+                .update
+                .iter()
+                .map(|name| {
+                    (
+                        name.to_string(),
+                        *(scan_subdirs.get(name).expect("key found")),
+                    )
+                })
+                .collect(),
+            dirs_del: subdirs_cmp
+                .del
+                .iter()
+                .map(|name| name.to_string())
+                .collect(),
+            media_del: files_cmp
+                .del
+                .iter()
+                .map(|name| subpath(&path, name).to_string_lossy().to_string())
+                .collect(),
+            media_new: files_cmp
                 .new
                 .iter()
                 .map(|name| {
                     MediaThumb::new(&path, name, *(scan_files.get(name).expect("key found")))
                 })
                 .collect(),
-            update: files_cmp
+            media_update: files_cmp
                 .update
                 .iter()
                 .map(|name| {
