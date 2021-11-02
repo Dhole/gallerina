@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:experimental
+
 FROM rust:1.56-bullseye as build-rust
 
 RUN apt-get update \
@@ -9,19 +11,20 @@ WORKDIR /magick
 RUN curl https://download.imagemagick.org/ImageMagick/download/ImageMagick.tar.gz | tar xz \
  && cd ImageMagick-${MAGICK_VERSION}* \
  && ./configure --with-magick-plus-plus=no --with-perl=no \
- && make \
+ && make -j 4 \
  && make install
 
 WORKDIR /backend
 COPY backend .
-RUN cargo build --release
+RUN --mount=type=cache,sharing=locked,id=cargotarget,target=/backend/target cargo build --release
+RUN --mount=type=cache,sharing=locked,id=cargotarget,target=/backend/target cp /backend/target/release/backend /backend/backend
 
 FROM node:16-alpine as build-node
 WORKDIR /frontend
-COPY front/package.json .
-RUN npm install
-COPY front .
-RUN npm run build
+COPY frontend/package.json .
+RUN --mount=type=cache,sharing=locked,id=cargotarget,target=/frontend/node_modules npm install
+COPY frontend .
+RUN --mount=type=cache,sharing=locked,id=cargotarget,target=/frontend/node_modules npm run build
 
 FROM debian:bullseye-slim
 
@@ -41,8 +44,11 @@ ENV LD_LIBRARY_PATH=/usr/local/lib
 # RUN apt-get remove -y build-essential \
 #  && apt-get autoremove -y
 
+RUN apt-get update \
+ && apt-get -y install gdb curl
+
 WORKDIR /app
-COPY --from=build-rust /backend/target/release/backend gallerina
+COPY --from=build-rust /backend/backend gallerina
 COPY --from=build-node /frontend/public static
 RUN mkdir -p /app/db
 # ENTRYPOINT /app/gallerina

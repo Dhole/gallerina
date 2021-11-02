@@ -211,7 +211,9 @@ pub struct StateConfig<'a> {
 }
 
 async fn db_connection(url: &str) -> Result<SqlitePool, sqlx::Error> {
-    let mut opts = SqliteConnectOptions::from_str(url)?;
+    let mut opts = SqliteConnectOptions::from_str(url)?
+        .serialized(true)
+        .busy_timeout(Duration::from_secs(3600));
     opts.log_statements(LevelFilter::Debug)
         .log_slow_statements(LevelFilter::Warn, Duration::from_millis(800));
     Ok(SqlitePool::connect_with(opts).await?)
