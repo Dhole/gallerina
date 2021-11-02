@@ -31,10 +31,15 @@ use crate::models::tables;
 use crate::models::views;
 use crate::state::Storage;
 // use crate::utils::MediaType::*;
+use lazy_static::lazy_static;
 
 pub const THUMB_SIZE: u16 = 512;
 pub const THUMB_QUALITY: u8 = 80;
 pub const MAX_SQL_TX_SIZE: usize = 1024;
+
+lazy_static! {
+    static ref MUTEX: Mutex<()> = Mutex::new(());
+}
 
 #[derive(Debug)]
 pub enum ScanError {
@@ -603,14 +608,18 @@ impl<'a> Batch<'a> {
         self.count += 1;
         if self.count >= self.max {
             let tx = std::mem::replace(&mut self.tx, self.db.begin().await?);
+            let guard = MUTEX.lock().await;
             tx.commit().await?;
+            drop(guard);
             self.count = 0;
         }
         Ok(())
     }
 
     pub async fn commit(self) -> Result<(), sqlx::Error> {
+        let guard = MUTEX.lock().await;
         self.tx.commit().await?;
+        drop(guard);
         Ok(())
     }
 }

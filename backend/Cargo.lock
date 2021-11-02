@@ -429,6 +429,7 @@ dependencies = [
  "http-types",
  "image",
  "kamadak-exif",
+ "lazy_static",
  "log",
  "magick_rust",
  "num_cpus",
