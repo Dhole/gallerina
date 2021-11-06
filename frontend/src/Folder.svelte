@@ -1,5 +1,5 @@
 <script>
-  import { FileType, serverUrl } from './globals.ts';
+  import { FileType, serverUrl, apiUrl, uiUrl } from './globals.ts';
   import { onMount, beforeUpdate } from 'svelte';
   import Nav from './Nav.svelte';
 
@@ -40,7 +40,8 @@
     console.log(dirSplit);
     queryDirSplit = dirSplit;
 
-    let folderUrl = `${serverUrl}/folder?sort=${querySort}&reverse=${queryReverse}&dir=${dir}`;
+    // let folderUrl = `${serverUrl}/folder?sort=${querySort}&reverse=${queryReverse}&dir=${dir}`;
+    let folderUrl = apiUrl('folder', {'sort':querySort, 'reverse': queryReverse, 'dir': dir.slice(0, -1)});
     if (dir !== "/") {
       folderUrl = folderUrl.replace(/\/$/, '');
     }
@@ -114,18 +115,18 @@
 	<div class="square">
 	  {#if file === null}
 	  {:else if file.typ === FileType.Folder}
-	    <!--<a class="thumb folder" href="?view=folder&sort={querySort}&reverse={queryReverse}&dir={queryDir}{file.name}/"
-       style="background-size: cover; background-position: center center; background-image: url('{serverUrl}/thumb?path={queryDir}{file.name}/{file.img}');">-->
-       <a class="thumb folder" href="?view=folder&sort={querySort}&reverse={queryReverse}&dir={queryDir}{file.name}/">
-	 <div class="folderlabel">{file.name}</div>
+	    <a class="thumb folder"
+	      href="{uiUrl({'view':'folder', 'sort':querySort, 'reverse':queryReverse, 'dir':`${queryDir}${file.name}/`})}">
+	      <div class="folderlabel">{file.name}</div>
 	      {#if file.media !== null}
-	      <img class="folderimg" loading="lazy" src="{serverUrl}/thumb?path={queryDir}{file.name}/{file.media}">
+		<img class="folderimg" loading="lazy"
+		  src="{apiUrl('thumb', {'path':`${queryDir}${file.name}/${file.media}`})}">
 	      {/if}
 	    </a>
 	  {:else if file.typ === FileType.Image}
-	    <!--<a href="{serverUrl}/src?dir={queryDir}{file.name}">-->
-	    <a href="?view=media&sort={querySort}&reverse={queryReverse}&dir={queryDir}&name={file.name}">
-	    <img class="thumb image" loading="lazy" src="{serverUrl}/thumb?path={queryDir}{file.name}">
+	    <a href="{uiUrl({'view':'media', 'sort':querySort, 'reverse':queryReverse, 'dir':queryDir, 'name':file.name})}">
+	    <img class="thumb image" loading="lazy"
+	      src="{apiUrl('thumb', {'path':`${queryDir}${file.name}`})}">
 	    </a>
 	  {/if}
 	</div>

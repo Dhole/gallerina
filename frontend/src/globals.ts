@@ -1,6 +1,6 @@
 export const FileType = {
-	Folder: 1,
-	Image:  0,
+  Folder: 1,
+  Image:  0,
 };
 
 // Configuration
@@ -9,3 +9,16 @@ export const serverUrl = "api";
 // export const serverUrl = "/api";
 export const defaultPlaySecs = 2;
 
+
+
+export function apiUrl(path, params) {
+  let p = new URLSearchParams(params);
+  let u = `${serverUrl}/${path}?${p.toString()}`;
+  return u;
+}
+
+export function uiUrl(params) {
+  let p = new URLSearchParams(params);
+  let u = `?${p.toString()}`;
+  return u;
+}

@@ -1,5 +1,5 @@
 <script>
-  import { FileType, serverUrl, defaultPlaySecs } from './globals.ts';
+  import { FileType, serverUrl, apiUrl, uiUrl, defaultPlaySecs } from './globals.ts';
   import { onMount, beforeUpdate } from 'svelte';
 
   let queryPathSplit = [];
@@ -76,11 +76,15 @@
   }
 
   function imgUrl(name) {
-    return `${serverUrl}/src/${name}?dir=${queryDir}`;
+    let u = apiUrl(`src/${encodeURIComponent(name)}`, {'dir':queryDir});
+    console.log("imgUrl", u);
+    return u;
+    // return `${serverUrl}/src/${name}?dir=${queryDir}`;
   }
 
   function urlPath() {
-    return `?view=media&sort=${querySort}&reverse=${queryReverse}&dir=${queryDir}&name=${queryName}`;
+    return uiUrl({'view':'meda', 'sort':querySort, 'reverse':queryReverse, 'dir':queryDir, 'name':queryName});
+    // return `?view=media&sort=${querySort}&reverse=${queryReverse}&dir=${queryDir}&name=${queryName}`;
   }
 
   const cachePrev = 2;
@@ -385,10 +389,12 @@
     // console.log(pathSplit);
     queryPathSplit = pathSplit;
 
-    let folderUrl = `${serverUrl}/folder?sort=${querySort}&reverse=${queryReverse}&dir=${dir}`;
-    if (dir !== "/") {
-      folderUrl = folderUrl.replace(/\/$/, '');
+    // let folderUrl = `${serverUrl}/folder?sort=${querySort}&reverse=${queryReverse}&dir=${dir}`;
+    let _dir = dir;
+    if (_dir !== "/") {
+      _dir = _dir.slice(0, -1);
     }
+    let folderUrl = apiUrl('folder', {'sort':querySort, 'reverse':queryReverse, 'dir':_dir});
     try {
       const res = await fetch(folderUrl);
       folder = await res.json();
@@ -436,7 +442,6 @@
     <div class="imgcontainer">
       <div class="imgbar">
 	{#if queryName !== ""}
-	  <!--<img id="media" src="{serverUrl}/src/{queryName}?dir={queryDir}" class="imgview" alt="{queryName}" on:click={clickMedia}>-->
 	  <img id="media" class="imgview" alt="{queryName}" on:click={clickMedia}>
 	{:else}
 	  loading...
@@ -494,22 +499,5 @@
 	{/if}
       </div>
   </div>
-
-  <!--
-  <div class="row">
-    <div class="col">
-      <img style="display: flex; margin: 0 auto; height: 100%; object-fit: contain;" src="{serverUrl}/src?dir={queryPath}">
-    </div>
-  </div>
-
-  <div style="border: 0.1em solid; border-radius: 0.2em; margin: 1em 0.1em;" class="row">
-    <div style="display: flex; margin: 0.4em 1em;" class="col">
-      <a class="button primary">Previous</a>
-      <label> 1/24 </label>
-      <a class="button primary">Next</a>
-    </div>
-  </div>
-  -->
-
 
 </div>
