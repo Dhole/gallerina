@@ -70,20 +70,15 @@
     }
   }
 
-  function reload() {
-    let base = window.location.origin + window.location.pathname;
-    window.location.replace(`${base}?view=folder&sort=${querySort}&reverse=${queryReverse}&dir=${queryDir}&name=${queryName}`);
-  }
-
   function imgUrl(name) {
-    let u = apiUrl(`src/${encodeURIComponent(name)}`, {'dir':queryDir});
+    let u = apiUrl(`src/${encodeURIComponent(name)}`, {'dir':`${queryDir}/`});
     console.log("imgUrl", u);
     return u;
     // return `${serverUrl}/src/${name}?dir=${queryDir}`;
   }
 
   function urlPath() {
-    return uiUrl({'view':'meda', 'sort':querySort, 'reverse':queryReverse, 'dir':queryDir, 'name':queryName});
+    return uiUrl({'view':'media', 'sort':querySort, 'reverse':queryReverse, 'dir':queryDir, 'name':queryName});
     // return `?view=media&sort=${querySort}&reverse=${queryReverse}&dir=${queryDir}&name=${queryName}`;
   }
 
@@ -390,11 +385,11 @@
     queryPathSplit = pathSplit;
 
     // let folderUrl = `${serverUrl}/folder?sort=${querySort}&reverse=${queryReverse}&dir=${dir}`;
-    let _dir = dir;
-    if (_dir !== "/") {
-      _dir = _dir.slice(0, -1);
-    }
-    let folderUrl = apiUrl('folder', {'sort':querySort, 'reverse':queryReverse, 'dir':_dir});
+    // let _dir = dir;
+    // if (dir !== "/") {
+    //   dir = dir.slice(0, -1);
+    // }
+    let folderUrl = apiUrl('folder', {'sort':querySort, 'reverse':queryReverse, 'dir': dir});
     try {
       const res = await fetch(folderUrl);
       folder = await res.json();

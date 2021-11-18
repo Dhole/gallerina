@@ -1,4 +1,5 @@
 use http_types::mime::Mime;
+use percent_encoding::percent_decode_str;
 use std::error::Error;
 use std::fmt;
 use std::path::Path;
@@ -55,7 +56,7 @@ impl fmt::Display for QueryError {
 impl Error for QueryError {}
 
 pub async fn get_src(req: Request) -> tide::Result<Response> {
-    let name = req.param("name")?;
+    let name = &*percent_decode_str(req.param("name")?).decode_utf8_lossy();
     let query: queries::SrcQuery = req.query()?;
     let root = req.state().storage.root().clone();
     let mut path = root.join(Path::new(query.dir.strip_prefix('/').unwrap_or(&query.dir)));

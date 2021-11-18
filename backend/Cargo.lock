@@ -433,6 +433,7 @@ dependencies = [
  "magick_rust",
  "num_cpus",
  "parallel-stream",
+ "percent-encoding",
  "serde",
  "sha3",
  "sqlx",

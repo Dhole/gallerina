@@ -6,6 +6,7 @@
   let queryDirSplit = [];
   let paramFileRows = [];
   let queryDir = "";
+  let cleanDir = "";
   let querySort = "";
   let queryReverse = false;
 
@@ -29,19 +30,33 @@
     let urlParams = new URLSearchParams(window.location.search);
     let dir = urlParams.get('dir');
     queryDir = dir;
+    cleanDir = queryDir === "/" ? "" : queryDir;
     let sort = urlParams.get('sort');
     querySort = sort;
     let reverse = urlParams.get('reverse');
     queryReverse = reverse === "true" ? true : false;
     let dirSplit = decodeURIComponent(dir).split("/");
-    for (let i = 0; i < dirSplit.length - 1; i++) {
-      dirSplit[i] = `${dirSplit[i]}/`;
+    let _queryDirSplit = [];
+    for (let i = 0; i < dirSplit.length; i++) {
+      let elem = undefined;
+      if (i === 0) {
+	elem = { name: "/", dir: "/" };
+      } else if (i == dirSplit.length - 1) {
+	elem = { name: dirSplit[i], dir: dirSplit.join("/") };
+      } else {
+	elem = { name: `${dirSplit[i]}/`, dir: dirSplit.slice(0, i+1).join("/") };
+      }
+      _queryDirSplit.push(elem);
     }
     console.log(dirSplit);
-    queryDirSplit = dirSplit;
+    queryDirSplit = _queryDirSplit;
 
     // let folderUrl = `${serverUrl}/folder?sort=${querySort}&reverse=${queryReverse}&dir=${dir}`;
-    let folderUrl = apiUrl('folder', {'sort':querySort, 'reverse': queryReverse, 'dir': dir.slice(0, -1)});
+    // let _dir = dir;
+    // if (dir !== "/") {
+    //   dir = dir.slice(0, -1);
+    // }
+    let folderUrl = apiUrl('folder', {'sort':querySort, 'reverse': queryReverse, 'dir': dir});
     if (dir !== "/") {
       folderUrl = folderUrl.replace(/\/$/, '');
     }
@@ -76,9 +91,9 @@
   <Nav/>
 
   <h1>
-{#each queryDirSplit as elem, i}
-  <a href="?view=folder&sort={querySort}&reverse={queryReverse}&dir={queryDirSplit.slice(0, i+1).join("")}">
-    {elem}
+{#each queryDirSplit as elem}
+  <a href="{uiUrl({'view':'folder', 'sort':querySort, 'reverse':queryReverse, 'dir': elem.dir})}">
+    {elem.name}
   </a>
 {:else}
   loading...
@@ -116,17 +131,17 @@
 	  {#if file === null}
 	  {:else if file.typ === FileType.Folder}
 	    <a class="thumb folder"
-	      href="{uiUrl({'view':'folder', 'sort':querySort, 'reverse':queryReverse, 'dir':`${queryDir}${file.name}/`})}">
+	      href="{uiUrl({'view':'folder', 'sort':querySort, 'reverse':queryReverse, 'dir':`${cleanDir}/${file.name}`})}">
 	      <div class="folderlabel">{file.name}</div>
 	      {#if file.media !== null}
 		<img class="folderimg" loading="lazy"
-		  src="{apiUrl('thumb', {'path':`${queryDir}${file.name}/${file.media}`})}">
+		  src="{apiUrl('thumb', {'path':`${cleanDir}/${file.name}/${file.media}`})}">
 	      {/if}
 	    </a>
 	  {:else if file.typ === FileType.Image}
 	    <a href="{uiUrl({'view':'media', 'sort':querySort, 'reverse':queryReverse, 'dir':queryDir, 'name':file.name})}">
 	    <img class="thumb image" loading="lazy"
-	      src="{apiUrl('thumb', {'path':`${queryDir}${file.name}`})}">
+	      src="{apiUrl('thumb', {'path':`${cleanDir}/${file.name}`})}">
 	    </a>
 	  {/if}
 	</div>
