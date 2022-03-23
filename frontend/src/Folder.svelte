@@ -4,14 +4,13 @@
   import Nav from './Nav.svelte';
 
   let queryDirSplit = [];
-  let paramFileRows = [];
   let queryDir = "";
   let cleanDir = "";
   let querySort = "";
   let queryReverse = false;
   let queryRaw = false;
 
-  let rowSize = 8;
+  let paramItems = [];
 
   function reload() {
     let base = window.location.origin + window.location.pathname;
@@ -19,14 +18,6 @@
   }
 
   onMount(async () => {
-    let w = window.innerWidth;
-    if (w >= 1200) {
-      rowSize = 8;
-    } else if (w >= 800) {
-      rowSize = 5;
-    } else {
-      rowSize = 3;
-    }
     // let param = window.location.hash.substr(1);
     let urlParams = new URLSearchParams(window.location.search);
     let dir = urlParams.get('dir');
@@ -61,26 +52,14 @@
     const res = await fetch(folderUrl);
     let folder = await res.json();
     // console.log(folder);
-    let fileRows = [[]];
-    let row = 0;
+    let items = [];
     folder.folders.forEach((folder) => {
-      fileRows[row].push({typ: FileType.Folder, name: folder.name, media: folder.media});
-      if (fileRows[row].length === rowSize) {
-	row += 1;
-	fileRows.push([]);
-      }
+      items.push({typ: FileType.Folder, name: folder.name, media: folder.media});
     })
     folder.media.forEach((media) => {
-      fileRows[row].push({typ: FileType.Image, name: media.name});
-      if (fileRows[row].length === rowSize) {
-	row += 1;
-	fileRows.push([]);
-      }
+      items.push({typ: FileType.Image, name: media.name});
     });
-    for (let i = fileRows[row].length % rowSize; i < rowSize; i++) {
-      fileRows[row].push(null);
-    }
-    paramFileRows = fileRows;
+    paramItems = items;
     // console.log(fileRows);
   });
 </script>
@@ -127,6 +106,50 @@
   </div>
 </div>
 
+<div class="constrain">
+<div class="gridContainer">
+{#if paramItems === []}
+  <p>loading...</p>
+{:else}
+  {#each paramItems as item}
+    <div class="gridItemContainer">
+      <div class="itemLink">
+	<div class="itemBox">
+	  <div class="itemImage">
+	    {#if item === null}
+	    {:else if item.typ === FileType.Folder}
+	      <div class="folderlabel">{item.name}</div>
+	      <a class="folder itemLink" href="{uiUrl({'view':'folder', 'sort':querySort, 'reverse':queryReverse, 'raw':queryRaw, 'dir':`${cleanDir}/${item.name}`})}">
+		{#if item.media !== null}
+		  <img class="gridImage folderimg" loading="lazy"
+		    src="{apiUrl('thumb', {'path':`${cleanDir}/${item.name}/${item.media}`})}">
+		{/if}
+	      </a>
+	    {:else if item.typ === FileType.Image}
+	      {#if queryRaw}
+		<a class="itemLink2"
+		  href="{apiUrl(`src/${encodeURIComponent(item.name)}`, {'dir':`${cleanDir}/`})}">
+		  <img class="gridImage image" loading="lazy"
+		    src="{apiUrl('thumb', {'path':`${cleanDir}/${item.name}`})}">
+		</a>
+	      {:else}
+		<a class="itemLink2"
+		  href="{uiUrl({'view':'media', 'sort':querySort, 'reverse':queryReverse, 'dir':queryDir, 'name':item.name})}">
+		  <img class="gridImage image" loading="lazy"
+		    src="{apiUrl('thumb', {'path':`${cleanDir}/${item.name}`})}">
+		</a>
+	      {/if}
+	    {/if}
+	  </div>
+	</div>
+      </div>
+    </div>
+  {/each}
+{/if}
+</div>
+</div>
+
+<!--
 {#each paramFileRows as fileRow}
   <div style="aspect-ratio: {rowSize};" class="grow">
     {#each fileRow as file}
@@ -162,5 +185,6 @@
 {:else}
 <p>loading...</p>
 {/each}
+-->
 
 </div>
