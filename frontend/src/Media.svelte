@@ -5,6 +5,7 @@
   let queryPathSplit = [];
   let paramFileRows = [];
   let queryDir = "";
+  let cleanDir = "";
   let queryName = "";
   let querySort = "";
   let queryReverse = false;
@@ -71,15 +72,13 @@
   }
 
   function imgUrl(name) {
-    let u = apiUrl(`src/${encodeURIComponent(name)}`, {'dir':`${queryDir}/`});
+    let u = apiUrl(`src/${encodeURIComponent(name)}`, {'dir':`${cleanDir}/`});
     console.log("imgUrl", u);
     return u;
-    // return `${serverUrl}/src/${name}?dir=${queryDir}`;
   }
 
   function urlPath() {
     return uiUrl({'view':'media', 'sort':querySort, 'reverse':queryReverse, 'dir':queryDir, 'name':queryName});
-    // return `?view=media&sort=${querySort}&reverse=${queryReverse}&dir=${queryDir}&name=${queryName}`;
   }
 
   const cachePrev = 2;
@@ -370,6 +369,7 @@
     let urlParams = new URLSearchParams(window.location.search);
     let dir = urlParams.get('dir');
     queryDir = dir;
+    cleanDir = queryDir === "/" ? "" : queryDir;
     let name = urlParams.get('name');
     queryName = name;
     // console.log("name", queryName);

@@ -9,12 +9,13 @@
   let cleanDir = "";
   let querySort = "";
   let queryReverse = false;
+  let queryRaw = false;
 
   let rowSize = 8;
 
   function reload() {
     let base = window.location.origin + window.location.pathname;
-    window.location.replace(`${base}?view=folder&sort=${querySort}&reverse=${queryReverse}&dir=${queryDir}`);
+    window.location.replace(`${base}?view=folder&sort=${querySort}&reverse=${queryReverse}&raw=${queryRaw}&dir=${queryDir}`);
   }
 
   onMount(async () => {
@@ -35,6 +36,8 @@
     querySort = sort;
     let reverse = urlParams.get('reverse');
     queryReverse = reverse === "true" ? true : false;
+    let raw = urlParams.get('raw');
+    queryRaw = raw === "true" ? true : false;
     let dirSplit = decodeURIComponent(dir).split("/");
     let _queryDirSplit = [];
     for (let i = 0; i < dirSplit.length; i++) {
@@ -51,11 +54,6 @@
     console.log(dirSplit);
     queryDirSplit = _queryDirSplit;
 
-    // let folderUrl = `${serverUrl}/folder?sort=${querySort}&reverse=${queryReverse}&dir=${dir}`;
-    // let _dir = dir;
-    // if (dir !== "/") {
-    //   dir = dir.slice(0, -1);
-    // }
     let folderUrl = apiUrl('folder', {'sort':querySort, 'reverse': queryReverse, 'dir': dir});
     if (dir !== "/") {
       folderUrl = folderUrl.replace(/\/$/, '');
@@ -92,7 +90,7 @@
 
   <h1>
 {#each queryDirSplit as elem}
-  <a href="{uiUrl({'view':'folder', 'sort':querySort, 'reverse':queryReverse, 'dir': elem.dir})}">
+  <a href="{uiUrl({'view':'folder', 'sort':querySort, 'reverse':queryReverse, 'raw': queryRaw, 'dir': elem.dir})}">
     {elem.name}
   </a>
 {:else}
@@ -106,18 +104,24 @@
     <div>
       <label style="margin-right: 0.6em;" class="vcenter">Sort by </label>
     </div>
-    <div style="margin-right: 1em;">
+    <div>
       <select style="width: 8em;" class="vcenter" id="sort" bind:value={querySort} on:change={reload}>
 	<option value="name">name</option>
 	<option value="taken">taken</option>
 	<option value="modified">modified</option>
       </select>
     </div>
-    <div style="margin-right: 0.6em;">
+    <div style="margin-left: 1em; margin-right: 0.6em;">
       <label class="vcenter" for="reverse">reverse</label>
     </div>
     <div>
       <input style="top: 42%" class="vcenter" type="checkbox" id="reverse" bind:checked={queryReverse} on:change={reload}>
+    </div>
+    <div style="margin-left: 1em; margin-right: 0.6em">
+      <label class="vcenter" for="raw">raw</label>
+    </div>
+    <div>
+      <input style="top: 42%" class="vcenter" type="checkbox" id="raw" bind:checked={queryRaw}>
     </div>
 
   </div>
@@ -131,7 +135,7 @@
 	  {#if file === null}
 	  {:else if file.typ === FileType.Folder}
 	    <a class="thumb folder"
-	      href="{uiUrl({'view':'folder', 'sort':querySort, 'reverse':queryReverse, 'dir':`${cleanDir}/${file.name}`})}">
+	      href="{uiUrl({'view':'folder', 'sort':querySort, 'reverse':queryReverse, 'raw':queryRaw, 'dir':`${cleanDir}/${file.name}`})}">
 	      <div class="folderlabel">{file.name}</div>
 	      {#if file.media !== null}
 		<img class="folderimg" loading="lazy"
@@ -139,10 +143,17 @@
 	      {/if}
 	    </a>
 	  {:else if file.typ === FileType.Image}
-	    <a href="{uiUrl({'view':'media', 'sort':querySort, 'reverse':queryReverse, 'dir':queryDir, 'name':file.name})}">
-	    <img class="thumb image" loading="lazy"
-	      src="{apiUrl('thumb', {'path':`${cleanDir}/${file.name}`})}">
-	    </a>
+	    {#if queryRaw}
+	      <a href="{apiUrl(`src/${encodeURIComponent(file.name)}`, {'dir':`${cleanDir}/`})}">
+	      <img class="thumb image" loading="lazy"
+		src="{apiUrl('thumb', {'path':`${cleanDir}/${file.name}`})}">
+	      </a>
+	    {:else}
+	      <a href="{uiUrl({'view':'media', 'sort':querySort, 'reverse':queryReverse, 'dir':queryDir, 'name':file.name})}">
+	      <img class="thumb image" loading="lazy"
+		src="{apiUrl('thumb', {'path':`${cleanDir}/${file.name}`})}">
+	      </a>
+	    {/if}
 	  {/if}
 	</div>
       </div>
