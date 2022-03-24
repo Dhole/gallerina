@@ -340,6 +340,7 @@ where
     let thumb =
         magick::make_thumb(&*filepath.to_string_lossy()).map_err(|err| ThumbError::Magick(err))?;
     return Ok(thumb);
+    /*
     let ext = is_media(filepath)?.ok_or(ThumbError::NotMedia)?;
     let img = match ext {
         Jpeg => {
@@ -396,6 +397,7 @@ where
     let mut thumb_buf = Vec::with_capacity(100 * 1024);
     scaled.write_to(&mut thumb_buf, ImageOutputFormat::Jpeg(THUMB_QUALITY))?;
     Ok(thumb_buf)
+    */
 }
 
 /*

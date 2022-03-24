@@ -22,8 +22,19 @@ pub fn make_thumb(path: &str) -> Result<Vec<u8>, &'static str> {
     } else {
         ((width as f64 * height_ratio) as usize, THUMB_SIZE as usize)
     };
-
     wand.set_image_compression_quality(THUMB_QUALITY as usize)?;
+
+    let orientation = wand.get_image_orientation();
+    let (new_width, new_height) = match orientation {
+        1 => (new_width, new_height),
+        o => {
+            wand.auto_orient();
+            match o {
+                6 | 8 | 5 | 7 => (new_height, new_width),
+                _ => (new_width, new_height),
+            }
+        }
+    };
     wand.thumbnail_image(new_width, new_height);
     wand.write_image_blob("jpeg")
 }
