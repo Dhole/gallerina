@@ -10,6 +10,8 @@ pub mod queries {
         Taken,
         #[serde(rename = "modified")]
         Modified,
+        #[serde(rename = "random")]
+        Random,
     }
 
     fn sort_default() -> Sort {
@@ -54,6 +56,11 @@ pub mod responses {
     }
 
     #[derive(Debug, Serialize)]
+    pub struct FolderRecursive {
+        pub media: Vec<views::MediaDataDir>,
+    }
+
+    #[derive(Debug, Serialize)]
     pub struct ScannerReply {
         pub reply: scanner::Reply,
     }
@@ -72,6 +79,12 @@ pub mod views {
 
     #[derive(Debug, Serialize, sqlx::FromRow)]
     pub struct MediaData {
+        pub name: String,
+    }
+
+    #[derive(Debug, Serialize, sqlx::FromRow)]
+    pub struct MediaDataDir {
+        pub dir: String,
         pub name: String,
     }
 

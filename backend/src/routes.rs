@@ -31,6 +31,17 @@ pub async fn get_folder(req: Request) -> tide::Result<Body> {
     Body::from_json(&responses::Folder { media, folders })
 }
 
+pub async fn get_folder_recursive(req: Request) -> tide::Result<Body> {
+    // Reuse FolderQuery eventhough we only care about dir
+    let query: queries::FolderQuery = req.query()?;
+    let media = req
+        .state()
+        .storage
+        .folder_media_recursive(&query.dir)
+        .await?;
+    Body::from_json(&responses::FolderRecursive { media })
+}
+
 pub async fn get_thumb(req: Request) -> tide::Result<Response> {
     let query: queries::ThumbQuery = req.query()?;
     let mut body = Body::from_bytes(req.state().storage.thumb(&query.path)?);

@@ -140,6 +140,16 @@ impl<'a> Storage {
         &self.root
     }
 
+    pub async fn folder_media_recursive(
+        &self,
+        dir: &str,
+    ) -> Result<Vec<views::MediaDataDir>, sqlx::Error> {
+        sqlx::query_as("SELECT dir, name FROM image WHERE dir LIKE ?")
+            .bind(format!("{}%", dir))
+            .fetch_all(&self.db)
+            .await
+    }
+
     pub async fn folder_media(
         &self,
         dir: &str,
@@ -153,6 +163,7 @@ impl<'a> Storage {
                 queries::Sort::Name => "name",
                 queries::Sort::Taken => "timestamp",
                 queries::Sort::Modified => "mtime",
+                queries::Sort::Random => "name",
             }
         ))
         .bind(dir)
@@ -178,6 +189,7 @@ impl<'a> Storage {
                 queries::Sort::Name => "folder.name",
                 queries::Sort::Taken => "folder.mtime",
                 queries::Sort::Modified => "folder.mtime",
+                queries::Sort::Random => "folder.name",
             }
         ))
         .bind(dir)

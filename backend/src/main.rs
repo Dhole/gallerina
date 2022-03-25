@@ -90,6 +90,8 @@ async fn main() -> tide::Result<()> {
     }
 
     app.at("/api/folder").get(routes::get_folder);
+    app.at("/api/folderRecursive")
+        .get(routes::get_folder_recursive);
     app.at("/api/thumb").get(routes::get_thumb);
     app.at("/api/src/:name").get(routes::get_src);
     app.at("/api/status").get(routes::get_status);

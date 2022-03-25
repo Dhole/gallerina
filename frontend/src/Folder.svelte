@@ -1,20 +1,32 @@
 <script>
-  import { FileType, serverUrl, apiUrl, uiUrl } from './globals.ts';
+  import { FileType, serverUrl, apiUrl, uiUrl, emptyCfg, cfg2str, str2cfg, trimPrefix, shuffleArray } from './globals.ts';
   import { onMount, beforeUpdate } from 'svelte';
   import Nav from './Nav.svelte';
 
   let queryDirSplit = [];
   let queryDir = "";
   let cleanDir = "";
-  let querySort = "";
-  let queryReverse = false;
-  let queryRaw = false;
+  let queryCfg = emptyCfg;
+  // let querySort = "";
+  // let queryReverse = 0;
+  // let queryRaw = 0;
+  // let queryRecursive = 0;
 
   let paramItems = [];
 
   function reload() {
     let base = window.location.origin + window.location.pathname;
-    window.location.replace(`${base}?view=folder&sort=${querySort}&reverse=${queryReverse}&raw=${queryRaw}&dir=${queryDir}`);
+    window.location.replace(`${base}?view=folder&dir=${queryDir}&cfg=${cfg2str(queryCfg)}`);
+  }
+
+  function updateUrl() {
+    let base = window.location.pathname;
+    history.replaceState(null, '', `${base}?view=folder&dir=${queryDir}&cfg=${cfg2str(queryCfg)}`);
+  }
+
+  function bumpRandom() {
+    queryCfg.randSeed += 1;
+    reload();
   }
 
   onMount(async () => {
@@ -23,12 +35,10 @@
     let dir = urlParams.get('dir');
     queryDir = dir;
     cleanDir = queryDir === "/" ? "" : queryDir;
-    let sort = urlParams.get('sort');
-    querySort = sort;
-    let reverse = urlParams.get('reverse');
-    queryReverse = reverse === "true" ? true : false;
-    let raw = urlParams.get('raw');
-    queryRaw = raw === "true" ? true : false;
+    let cfg = urlParams.get('cfg');
+    cfg = cfg == null ? emptyCfg : str2cfg(cfg);
+    queryCfg = cfg;
+    updateUrl();
     let dirSplit = decodeURIComponent(dir).split("/");
     let _queryDirSplit = [];
     for (let i = 0; i < dirSplit.length; i++) {
@@ -42,25 +52,39 @@
       }
       _queryDirSplit.push(elem);
     }
-    console.log(dirSplit);
     queryDirSplit = _queryDirSplit;
 
-    let folderUrl = apiUrl('folder', {'sort':querySort, 'reverse': queryReverse, 'dir': dir});
-    if (dir !== "/") {
-      folderUrl = folderUrl.replace(/\/$/, '');
-    }
-    const res = await fetch(folderUrl);
-    let folder = await res.json();
-    // console.log(folder);
     let items = [];
-    folder.folders.forEach((folder) => {
-      items.push({typ: FileType.Folder, name: folder.name, media: folder.media});
-    })
-    folder.media.forEach((media) => {
-      items.push({typ: FileType.Image, name: media.name});
-    });
+    if (cfg.recursive === false) {
+      let folderUrl = apiUrl('folder', {'sort':cfg.sort, 'reverse': cfg.reverse, 'dir': dir});
+      if (dir !== "/") {
+	folderUrl = folderUrl.replace(/\/$/, '');
+      }
+      const res = await fetch(folderUrl);
+      let folder = await res.json();
+      folder.folders.forEach((folder) => {
+	items.push({typ: FileType.Folder, name: folder.name, media: folder.media});
+      })
+      folder.media.forEach((media) => {
+	items.push({typ: FileType.Image, name: media.name});
+      });
+    } else {
+      let folderUrl = apiUrl('folderRecursive', {'dir': dir});
+      if (dir !== "/") {
+	folderUrl = folderUrl.replace(/\/$/, '');
+      }
+      const res = await fetch(folderUrl);
+      let folder = await res.json();
+      folder.media.forEach((media) => {
+	let name = `${trimPrefix(media.dir, dir)}/${media.name}`;
+	name = trimPrefix(name, "/");
+	items.push({typ: FileType.Image, name: name});
+      });
+    }
+    if (cfg.sort === "random") {
+      shuffleArray(items, cfg.randSeed);
+    }
     paramItems = items;
-    // console.log(fileRows);
   });
 </script>
 
@@ -69,7 +93,7 @@
 
   <h1>
 {#each queryDirSplit as elem}
-  <a href="{uiUrl({'view':'folder', 'sort':querySort, 'reverse':queryReverse, 'raw': queryRaw, 'dir': elem.dir})}">
+  <a href="{uiUrl({'view':'folder', 'dir': elem.dir, 'cfg': cfg2str(queryCfg)})}">
     {elem.name}
   </a>
 {:else}
@@ -84,23 +108,35 @@
       <label style="margin-right: 0.6em;" class="vcenter">Sort by </label>
     </div>
     <div>
-      <select style="width: 8em;" class="vcenter" id="sort" bind:value={querySort} on:change={reload}>
+      <select style="width: 8em;" class="vcenter" id="sort" bind:value={queryCfg.sort} on:change={reload}>
 	<option value="name">name</option>
 	<option value="taken">taken</option>
 	<option value="modified">modified</option>
+	<option value="random">random</option>
       </select>
     </div>
+    {#if queryCfg.sort === "random"}
+    <div style="margin-left: 1em; margin-right: 0.6em;">
+      <a class="button primary" on:click={bumpRandom}>shuffle</a>
+    </div>
+    {/if}
     <div style="margin-left: 1em; margin-right: 0.6em;">
       <label class="vcenter" for="reverse">reverse</label>
     </div>
     <div>
-      <input style="top: 42%" class="vcenter" type="checkbox" id="reverse" bind:checked={queryReverse} on:change={reload}>
+      <input style="top: 42%" class="vcenter" type="checkbox" id="reverse" bind:checked={queryCfg.reverse} on:change={reload}>
     </div>
     <div style="margin-left: 1em; margin-right: 0.6em">
       <label class="vcenter" for="raw">raw</label>
     </div>
     <div>
-      <input style="top: 42%" class="vcenter" type="checkbox" id="raw" bind:checked={queryRaw}>
+      <input style="top: 42%" class="vcenter" type="checkbox" id="raw" bind:checked={queryCfg.raw} on:change={updateUrl}>
+    </div>
+    <div style="margin-left: 1em; margin-right: 0.6em">
+      <label class="vcenter" for="recursive">recursive</label>
+    </div>
+    <div>
+      <input style="top: 42%" class="vcenter" type="checkbox" id="recursive" bind:checked={queryCfg.recursive} on:change={reload}>
     </div>
 
   </div>
@@ -119,14 +155,14 @@
 	    {#if item === null}
 	    {:else if item.typ === FileType.Folder}
 	      <div class="folderlabel">{item.name}</div>
-	      <a class="folder itemLink" href="{uiUrl({'view':'folder', 'sort':querySort, 'reverse':queryReverse, 'raw':queryRaw, 'dir':`${cleanDir}/${item.name}`})}">
+	      <a class="folder itemLink" href="{uiUrl({'view':'folder', 'dir':`${cleanDir}/${item.name}`, 'cfg':`${(cfg2str(queryCfg))}`})}">
 		{#if item.media !== null}
 		  <img class="gridImage folderimg" loading="lazy"
 		    src="{apiUrl('thumb', {'path':`${cleanDir}/${item.name}/${item.media}`})}">
 		{/if}
 	      </a>
 	    {:else if item.typ === FileType.Image}
-	      {#if queryRaw}
+	      {#if queryCfg.raw}
 		<a class="itemLink2"
 		  href="{apiUrl(`src/${encodeURIComponent(item.name)}`, {'dir':`${cleanDir}/`})}">
 		  <img class="gridImage image" loading="lazy"
@@ -134,7 +170,7 @@
 		</a>
 	      {:else}
 		<a class="itemLink2"
-		  href="{uiUrl({'view':'media', 'sort':querySort, 'reverse':queryReverse, 'dir':queryDir, 'name':item.name})}">
+		  href="{uiUrl({'view':'media', 'dir':queryDir, 'name':item.name, 'cfg':cfg2str(queryCfg)})}">
 		  <img class="gridImage image" loading="lazy"
 		    src="{apiUrl('thumb', {'path':`${cleanDir}/${item.name}`})}">
 		</a>
