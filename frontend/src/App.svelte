@@ -3,6 +3,7 @@ import { onMount } from 'svelte';
 import Folder from './Folder.svelte';
 import Media from './Media.svelte';
 import Control from './Control.svelte';
+import { emptyCfg, cfg2str } from './globals.ts';
 
 let view = "";
 onMount(() => {
@@ -10,7 +11,7 @@ onMount(() => {
     view = urlParams.get('view');
     if (window.location.search === "") {
       let base = window.location.origin + window.location.pathname;
-      window.location.replace(`${base}?view=folder&sort=name&reverse=false&dir=/`);
+      window.location.replace(`${base}?view=folder&dir=/&cfg=${cfg2str(emptyCfg)}`);
     }
 });
 </script>

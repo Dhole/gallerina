@@ -7,11 +7,6 @@
   let queryDir = "";
   let cleanDir = "";
   let queryCfg = emptyCfg;
-  // let querySort = "";
-  // let queryReverse = 0;
-  // let queryRaw = 0;
-  // let queryRecursive = 0;
-
   let paramItems = [];
 
   function reload() {
@@ -120,19 +115,19 @@
       <a class="button primary" on:click={bumpRandom}>shuffle</a>
     </div>
     {/if}
-    <div style="margin-left: 1em; margin-right: 0.6em;">
+    <div style="margin-left: 1em; margin-right: 0.4em;">
       <label class="vcenter" for="reverse">reverse</label>
     </div>
     <div>
       <input style="top: 42%" class="vcenter" type="checkbox" id="reverse" bind:checked={queryCfg.reverse} on:change={reload}>
     </div>
-    <div style="margin-left: 1em; margin-right: 0.6em">
+    <div style="margin-left: 1em; margin-right: 0.4em">
       <label class="vcenter" for="raw">raw</label>
     </div>
     <div>
       <input style="top: 42%" class="vcenter" type="checkbox" id="raw" bind:checked={queryCfg.raw} on:change={updateUrl}>
     </div>
-    <div style="margin-left: 1em; margin-right: 0.6em">
+    <div style="margin-left: 1em; margin-right: 0.4em">
       <label class="vcenter" for="recursive">recursive</label>
     </div>
     <div>

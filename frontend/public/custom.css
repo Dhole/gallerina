@@ -220,3 +220,13 @@ flex-flow: row wrap;
   box-sizing: border-box;
   margin: 0px auto;
 }
+
+.progress-ring {
+
+}
+
+.progress-ring-circle {
+  transition: 0.10s stroke-dashoffset;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+}

@@ -7,7 +7,7 @@ export const FileType = {
 export const serverUrl = "http://127.0.0.1:8080/api";
 // export const serverUrl = "api";
 // export const serverUrl = "/api";
-export const defaultPlaySecs = 2;
+export const defaultPlaySecs = 5;
 
 export const emptyCfg = {
   sort: "name",

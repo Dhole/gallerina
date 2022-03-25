@@ -22,6 +22,7 @@
   let fetchIndex = -1;
   let buttonPlay = false;
   let playSecs = defaultPlaySecs;
+  let remSecs = 0;
   let playTimeout = undefined;
   let status = "[.]";
 
@@ -341,9 +342,25 @@
     await load(index);
   };
 
+  function updateProgressRing() {
+    var circle = document.getElementById('progress-ring');
+    var radius = circle.r.baseVal.value;
+    var circumference = radius * 2 * Math.PI;
+    const offset = circumference - (1 - (remSecs / playSecs)) * circumference;
+    circle.style.strokeDashoffset = offset;
+  }
+
   let slideshowLoop = async () => {
-    await loadNext();
-    playTimeout = setTimeout(slideshowLoop, playSecs * 1000);
+    remSecs -= 1;
+    updateProgressRing();
+    if (remSecs <= 0) {
+      await loadNext();
+      remSecs = playSecs;
+      updateProgressRing();
+    }
+    if (buttonPlay) {
+      playTimeout = setTimeout(slideshowLoop, 1000);
+    }
   }
 
   let play = async () => {
@@ -355,7 +372,16 @@
       return;
     }
     buttonPlay = true;
-    playTimeout = setTimeout(slideshowLoop, playSecs * 1000);
+    remSecs = playSecs;
+
+    let circle = document.getElementById('progress-ring');
+    let radius = circle.r.baseVal.value;
+    let circumference = radius * 2 * Math.PI;
+
+    circle.style.strokeDasharray = `${circumference} ${circumference}`;
+    updateProgressRing();
+
+    playTimeout = setTimeout(slideshowLoop, 1000);
   };
 
   let pause = async () => {
@@ -416,15 +442,6 @@
     loading = 0;
     index = folder.media.findIndex((media) => { return media.name === queryName; });
     indexP1 = index+1;
-    // console.log(folder);
-    // let items = [];
-    // folder.folders.forEach((folder) => {
-    //   items.push({typ: FileType.Folder, name: folder});
-    // })
-    // folder.media.forEach((media) => {
-    //   items.push({typ: FileType.Image, name: media.name});
-    // });
-    // paramItems = items;
     await load(index);
     // console.log(fileRows);
   });
@@ -467,6 +484,30 @@
 	{#if window.innerWidth >= 600}
 	  <div style="float: right; position: absolute; right: 1em">
 	    <div style="display: flex">
+
+	      <!-- Circular bar -->
+<svg
+   class="progress-ring"
+   width="100"
+   height="100">
+  <circle
+    fill="#282828"
+    r="50"
+    cx="50"
+    cy="50"/>
+  <circle
+    id="progress-ring"
+    class="progress-ring-circle"
+    stroke="#B0DEFF"
+    stroke-width="16"
+    fill="transparent"
+    r="42"
+    cx="50"
+    cy="50"/>
+  <text  x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#d2d6dd">{remSecs}</text>
+</svg>
+	      <!-- Circular bar -->
+
 	      {#if buttonPlay}
 		<a class="button primary" on:click={pause}>⏸</a>
 	      {:else}
