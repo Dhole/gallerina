@@ -380,6 +380,7 @@
 
     circle.style.strokeDasharray = `${circumference} ${circumference}`;
     updateProgressRing();
+    document.getElementById('div-progress-ring').style.display = "block";
 
     playTimeout = setTimeout(slideshowLoop, 1000);
   };
@@ -387,6 +388,7 @@
   let pause = async () => {
     buttonPlay = false;
     clearTimeout(playTimeout);
+    document.getElementById('div-progress-ring').style.display = "none";
   };
 
   onMount(async () => {
@@ -449,6 +451,31 @@
 
 <!--<div style="position:device-fixed;height: 100vh;">-->
 <div style="position: static;">
+
+  <div id="div-progress-ring" style="position:fixed; top: 1em; right: 1em; display: none; z-index: 2;">
+  <!-- Circular bar -->
+  <svg
+     class="progress-ring"
+     width="100"
+     height="100">
+    <circle
+      fill="#282828"
+      r="50"
+      cx="50"
+      cy="50"/>
+    <circle
+      id="progress-ring"
+      class="progress-ring-circle"
+      stroke="#B0DEFF"
+      stroke-width="16"
+      fill="transparent"
+      r="42"
+      cx="50"
+      cy="50"/>
+    <text  x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#d2d6dd">{remSecs}</text>
+  </svg>
+</div>
+
   <div style="align-items: center;">
     <div class="imgcontainer">
       <div class="imgbar">
@@ -484,29 +511,6 @@
 	{#if window.innerWidth >= 600}
 	  <div style="float: right; position: absolute; right: 1em">
 	    <div style="display: flex">
-
-	      <!-- Circular bar -->
-<svg
-   class="progress-ring"
-   width="100"
-   height="100">
-  <circle
-    fill="#282828"
-    r="50"
-    cx="50"
-    cy="50"/>
-  <circle
-    id="progress-ring"
-    class="progress-ring-circle"
-    stroke="#B0DEFF"
-    stroke-width="16"
-    fill="transparent"
-    r="42"
-    cx="50"
-    cy="50"/>
-  <text  x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#d2d6dd">{remSecs}</text>
-</svg>
-	      <!-- Circular bar -->
 
 	      {#if buttonPlay}
 		<a class="button primary" on:click={pause}>⏸</a>

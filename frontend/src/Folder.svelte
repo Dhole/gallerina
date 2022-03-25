@@ -146,17 +146,19 @@
     <div class="gridItemContainer">
       <div class="itemLink">
 	<div class="itemBox">
-	  <div class="itemImage">
 	    {#if item === null}
 	    {:else if item.typ === FileType.Folder}
+	  <a class="itemImage" href="{uiUrl({'view':'folder', 'dir':`${cleanDir}/${item.name}`, 'cfg':`${(cfg2str(queryCfg))}`})}">
 	      <div class="folderlabel">{item.name}</div>
-	      <a class="folder itemLink" href="{uiUrl({'view':'folder', 'dir':`${cleanDir}/${item.name}`, 'cfg':`${(cfg2str(queryCfg))}`})}">
+	      <div class="folder itemLink">
 		{#if item.media !== null}
 		  <img class="gridImage folderimg" loading="lazy"
 		    src="{apiUrl('thumb', {'path':`${cleanDir}/${item.name}/${item.media}`})}">
 		{/if}
-	      </a>
+	      </div>
+	  </a>
 	    {:else if item.typ === FileType.Image}
+	  <div class="itemImage">
 	      {#if queryCfg.raw}
 		<a class="itemLink2"
 		  href="{apiUrl(`src/${encodeURIComponent(item.name)}`, {'dir':`${cleanDir}/`})}">
@@ -170,8 +172,8 @@
 		    src="{apiUrl('thumb', {'path':`${cleanDir}/${item.name}`})}">
 		</a>
 	      {/if}
-	    {/if}
 	  </div>
+	    {/if}
 	</div>
       </div>
     </div>
