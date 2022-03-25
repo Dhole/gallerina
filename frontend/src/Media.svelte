@@ -73,7 +73,6 @@
 
   function imgUrl(name) {
     let u = apiUrl(`src/${encodeURIComponent(name)}`, {'dir':`${cleanDir}/`});
-    console.log("imgUrl", u);
     return u;
   }
 
@@ -113,7 +112,6 @@
   }
 
   let cancelFetch = async(ind) => {
-    // console.log("cancelFetch", "index", ind);
     fetchController[ind].abort();
     fetchController[ind] = null;
     fetchProgress[ind] = 0;
@@ -131,7 +129,6 @@
     for (var i = ind + cacheNext + 1; i < mediasLength; i++) {
       toClear.push(i);
     }
-    // console.log("index", ind, "toClear", toClear);
     for (var i = 0; i < toClear.length; i++) {
       const ind = toClear[i];
       if (mediasData[ind] !== null) {
@@ -141,7 +138,6 @@
   }
 
   let fetchNext = async () => {
-    // console.log("fetchNext");
     var toFetch = [];
     for (var i = index + 1; i < Math.min(mediasLength, index + cacheNext + 1); i++) {
       toFetch.push(i);
@@ -149,11 +145,9 @@
     for (var i = index - 1; i >= Math.max(0, index - cachePrev);  i--) {
       toFetch.push(i);
     }
-    // console.log("toFetch", toFetch);
     for (var i = 0; i < toFetch.length; i++) {
       const ind = toFetch[i];
       if (mediasData[ind] === null) {
-	// console.log("schedule", "index", ind);
 	await fetchImgBlob(ind, false);
 	return;
       }
@@ -197,7 +191,6 @@
   // priorize sets the priority of fetching this image to the highest
   let fetchImgBlob = async (ind, priorize) => {
     if (mediasData[ind] !== null) {
-      // console.log("mediasData not null");
       // If have priority and this image hasn't been fetched to 100%, cancel
       // the rest of the fetches in progress except this image, and then
       // schedule them again (with fetchNext).
@@ -225,17 +218,6 @@
     fetchIndex = ind;
     var controller = new AbortController();
     fetchController[ind] = controller;
-    // mediasData[ind] = fetch(url, {signal: controller.signal}).then(res => {
-    //   return res.blob();
-    //   // return readBodyProgress(res, ind);
-    // }).then(blob => {
-    //   console.log("fetched", "index", ind, "url", url);
-    //   fetchNext();
-    //   return blob;
-    // }).catch(error => {
-    //   // console.log("fetch errror", error);
-    //   return null;
-    // })
     fetchProgress[ind] = 0;
     mediasData[ind] = new Promise(async(resolve, reject) => {
       try {
@@ -243,15 +225,12 @@
 	// let blob = await res.blob();
 	let blob = await readBodyProgress(res, ind);
 	updateStatus();
-	// console.log("fetched", "index", ind, "url", url);
 	fetchNext();
 	resolve(blob);
       } catch (err) {
-	console.log("fetch imgUrl", err);
 	resolve(null);
       }
     });
-    // console.log("mediasData assigned");
   }
 
   let getImgBlob = async (ind) => {
@@ -267,7 +246,6 @@
     window.history.replaceState({}, null, urlPath());
     var urlCreator = window.URL || window.webkitURL;
     let blob = await getImgBlob(ind);
-    // console.log("blob", blob);
     if (blob === null || ind !== index) {
       loading -= 1;
       return;
@@ -399,7 +377,6 @@
     cleanDir = queryDir === "/" ? "" : queryDir;
     let name = urlParams.get('name');
     queryName = name;
-    // console.log("name", queryName);
     let cfg = urlParams.get('cfg');
     cfg = cfg == null ? emptyCfg : str2cfg(cfg);
     queryCfg = cfg;
@@ -407,7 +384,6 @@
     for (let i = 0; i < pathSplit.length - 1; i++) {
       pathSplit[i] = `${pathSplit[i]}/`;
     }
-    // console.log(pathSplit);
     queryPathSplit = pathSplit;
 
     let items = []
@@ -418,14 +394,12 @@
 	let _folder = await res.json();
 	items = _folder.media;
       } catch(err) {
-	console.log("fetch folderUrl", err);
 	return;
       }
     } else {
       let folderUrl = apiUrl('folderRecursive', {'dir': dir});
       const res = await fetch(folderUrl);
       let _folder = await res.json();
-      let items = [];
       _folder.media.forEach((media) => {
 	let name = `${trimPrefix(media.dir, dir)}/${media.name}`;
 	name = trimPrefix(name, "/");
@@ -436,7 +410,6 @@
       shuffleArray(items, cfg.randSeed);
     }
     folder = { media: items };
-    // console.log(folder.media);
     mediasLength = folder.media.length;
     mediasData = new Array(mediasLength).fill(null);
     fetchController = new Array(mediasLength).fill(null);
@@ -445,7 +418,6 @@
     index = folder.media.findIndex((media) => { return media.name === queryName; });
     indexP1 = index+1;
     await load(index);
-    // console.log(fileRows);
   });
 </script>
 

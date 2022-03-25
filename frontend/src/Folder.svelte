@@ -57,6 +57,9 @@
       }
       const res = await fetch(folderUrl);
       let folder = await res.json();
+      if (cfg.sort === "random") {
+	shuffleArray(folder.media, cfg.randSeed);
+      }
       folder.folders.forEach((folder) => {
 	items.push({typ: FileType.Folder, name: folder.name, media: folder.media});
       })
@@ -70,14 +73,15 @@
       }
       const res = await fetch(folderUrl);
       let folder = await res.json();
+
+      if (cfg.sort === "random") {
+	shuffleArray(folder.media, cfg.randSeed);
+      }
       folder.media.forEach((media) => {
 	let name = `${trimPrefix(media.dir, dir)}/${media.name}`;
 	name = trimPrefix(name, "/");
 	items.push({typ: FileType.Image, name: name});
       });
-    }
-    if (cfg.sort === "random") {
-      shuffleArray(items, cfg.randSeed);
     }
     paramItems = items;
   });
