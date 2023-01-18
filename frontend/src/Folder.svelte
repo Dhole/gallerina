@@ -1,5 +1,5 @@
 <script>
-  import { FileType, serverUrl, apiUrl, uiUrl, emptyCfg, cfg2str, str2cfg, trimPrefix, shuffleArray } from './globals.ts';
+  import { FileType, serverUrl, apiUrl, uiUrl, emptyCfg, cfg2str, str2cfg, trimPrefix, shuffleArray, isImg } from './globals.ts';
   import { onMount, beforeUpdate } from 'svelte';
   import Nav from './Nav.svelte';
 
@@ -150,34 +150,44 @@
     <div class="gridItemContainer">
       <div class="itemLink">
 	<div class="itemBox">
-	    {#if item === null}
-	    {:else if item.typ === FileType.Folder}
+	  {#if item === null}
+	  {:else if item.typ === FileType.Folder}
 	  <a class="itemImage" href="{uiUrl({'view':'folder', 'dir':`${cleanDir}/${item.name}`, 'cfg':`${(cfg2str(queryCfg))}`})}">
 	      <div class="folderlabel">{item.name}</div>
 	      <div class="folder itemLink">
 		{#if item.media !== null}
-		  <img class="gridImage folderimg" loading="lazy"
-		    src="{apiUrl('thumb', {'path':`${cleanDir}/${item.name}/${item.media}`})}">
+		<img class="gridImage folderimg" loading="lazy"
+		  src="{apiUrl('thumb', {'path':`${cleanDir}/${item.name}/${item.media}`})}">
 		{/if}
 	      </div>
 	  </a>
-	    {:else if item.typ === FileType.Image}
+	  {:else if item.typ === FileType.Image}
 	  <div class="itemImage">
 	      {#if queryCfg.raw}
-		<a class="itemLink2"
-		  href="{apiUrl(`src/${encodeURIComponent(item.name)}`, {'dir':`${cleanDir}/`})}">
-		  <img class="gridImage image" loading="lazy"
-		    src="{apiUrl('thumb', {'path':`${cleanDir}/${item.name}`})}">
-		</a>
+	      <a class="itemLink2"
+		href="{apiUrl(`src/${encodeURIComponent(item.name)}`, {'dir':`${cleanDir}/`})}">
+		{#if isImg(item.name)}
+		<img class="gridImage image" loading="lazy"
+		  src="{apiUrl('thumb', {'path':`${cleanDir}/${item.name}`})}">
+		{:else}
+		<img class="gridImage video" loading="lazy"
+		  src="{apiUrl('thumb', {'path':`${cleanDir}/${item.name}`})}">
+		{/if}
+	      </a>
 	      {:else}
-		<a class="itemLink2"
-		  href="{uiUrl({'view':'media', 'dir':queryDir, 'name':item.name, 'cfg':cfg2str(queryCfg)})}">
-		  <img class="gridImage image" loading="lazy"
-		    src="{apiUrl('thumb', {'path':`${cleanDir}/${item.name}`})}">
-		</a>
+	      <a class="itemLink2"
+		href="{uiUrl({'view':'media', 'dir':queryDir, 'name':item.name, 'cfg':cfg2str(queryCfg)})}">
+		{#if isImg(item.name)}
+		<img class="gridImage image" loading="lazy"
+		  src="{apiUrl('thumb', {'path':`${cleanDir}/${item.name}`})}">
+		{:else}
+		<img class="gridImage video" loading="lazy"
+		  src="{apiUrl('thumb', {'path':`${cleanDir}/${item.name}`})}">
+		{/if}
+	      </a>
 	      {/if}
 	  </div>
-	    {/if}
+	  {/if}
 	</div>
       </div>
     </div>

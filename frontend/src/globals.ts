@@ -74,3 +74,21 @@ export function shuffleArray(array, seed) {
     [array[i], array[j]] = [array[j], array[i]];
   }
 }
+
+export function getExt(filename) {
+  let parts = filename.split(".");
+  if (parts.length === 0) {
+    return "";
+  }
+  return parts[parts.length-1].toLowerCase();
+}
+
+// Return true if it's image, false if it's video
+export function isImg(filename) {
+  let ext = getExt(filename);
+  if (ext === "mp4" || ext === "mov") {
+    return false;
+  } else {
+    return true;
+  }
+}

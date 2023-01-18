@@ -6,6 +6,7 @@ use structopt::StructOpt;
 use tide::security::{CorsMiddleware, Origin};
 
 mod exif;
+// mod ffmpeg;
 mod magick;
 mod models;
 mod routes;
@@ -29,28 +30,28 @@ mod utils;
 #[structopt(name = "gallerina")]
 struct Args {
     /// SQLite Database file to use to index folders and media
-    #[structopt(short, long)]
+    #[structopt(long)]
     sqlite: String,
 
     /// MDB Database path to use to store thumbnails
-    #[structopt(short, long, parse(from_os_str))]
+    #[structopt(long, parse(from_os_str))]
     mdb: PathBuf,
 
     /// Root directory with the media
-    #[structopt(short, long, parse(from_os_str))]
+    #[structopt(long, parse(from_os_str))]
     root: PathBuf,
 
     /// Address to listen to
-    #[structopt(short, long, parse(try_from_str = SocketAddr::from_str),
+    #[structopt(long, parse(try_from_str = SocketAddr::from_str),
         default_value = "127.0.0.1:8080")]
     addr: SocketAddr,
 
     /// Number of threads for thumbnail creation
-    #[structopt(short, long, default_value = "0")]
+    #[structopt(long, default_value = "0")]
     threads: usize,
 
     /// Static directory which will be served at the root http path
-    #[structopt(short = "static", long = "static", parse(from_os_str))]
+    #[structopt(long = "static", parse(from_os_str))]
     static_dir: Option<PathBuf>,
 }
 

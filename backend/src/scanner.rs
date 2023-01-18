@@ -269,6 +269,7 @@ pub enum MediaType {
     Jpeg,
     Gif,
     Png,
+    Mp4,
 }
 
 use MediaType::*;
@@ -292,6 +293,7 @@ pub fn is_media(path: &Path) -> Result<Option<MediaType>, IsMediaError> {
         "jpe" => Jpeg,
         "gif" => Gif,
         "png" => Png,
+        "mp4" => Mp4,
         _ => return Ok(None),
     };
     Ok(Some(ext))

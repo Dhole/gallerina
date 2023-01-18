@@ -1,5 +1,5 @@
 <script>
-  import { FileType, serverUrl, apiUrl, uiUrl, defaultPlaySecs, emptyCfg, cfg2str, str2cfg, trimPrefix, shuffleArray } from './globals.ts';
+  import { FileType, serverUrl, apiUrl, uiUrl, defaultPlaySecs, emptyCfg, cfg2str, str2cfg, trimPrefix, shuffleArray, isImg } from './globals.ts';
   import { onMount, beforeUpdate } from 'svelte';
 
   let queryPathSplit = [];
@@ -48,7 +48,7 @@
   }
 
   function fullscreenMedia() {
-    let elem = document.getElementById("media"); 
+    let elem = document.getElementById("imgbar"); 
     fullscreen(elem);
   }
 
@@ -60,7 +60,7 @@
     let elem = fullScreenElement();
     if (elem === undefined) {
       fullscreenMedia();
-    } else if (elem.id === "media"){
+    } else if (elem.id === "imgbar"){
       if (e.clientX <= window.innerWidth / 2) {
 	loadPrev();
       } else {
@@ -221,9 +221,15 @@
     fetchProgress[ind] = 0;
     mediasData[ind] = new Promise(async(resolve, reject) => {
       try {
-	let res = await fetch(url, {signal: controller.signal});
-	// let blob = await res.blob();
-	let blob = await readBodyProgress(res, ind);
+	var blob = undefined;
+	if (isImg(name)) {
+	  let res = await fetch(url, {signal: controller.signal});
+	  // let blob = await res.blob();
+	  blob = await readBodyProgress(res, ind);
+	} else {
+	  blob = await fetchVideoBlob();
+	  fetchProgress[ind] = 1;
+	}
 	updateStatus();
 	fetchNext();
 	resolve(blob);
@@ -231,6 +237,10 @@
 	resolve(null);
       }
     });
+  }
+
+  let fetchVideoBlob = async() => {
+    return "video";
   }
 
   let getImgBlob = async (ind) => {
@@ -250,9 +260,16 @@
       loading -= 1;
       return;
     }
-    var imageUrl = urlCreator.createObjectURL(blob);
     let img = document.getElementById("media");
-    img.src = imageUrl;
+    if (isImg(queryName)) {
+      var imageUrl = urlCreator.createObjectURL(blob);
+      img.src = imageUrl;
+    } else {
+      let source = document.getElementById("videosource");
+      source.src = imgUrl(queryName);
+      source.type = "video/mp4";
+      img.load();
+    }
     loading -= 1;
     updateStatus();
   }
@@ -450,9 +467,15 @@
 
   <div style="align-items: center;">
     <div class="imgcontainer">
-      <div class="imgbar">
+      <div class="imgbar" id="imgbar" on:click={clickMedia}>
 	{#if queryName !== ""}
-	  <img id="media" class="imgview" alt="{queryName}" on:click={clickMedia}>
+	  {#if isImg(queryName)}
+	    <img id="media" class="imgview" alt="{queryName}">
+	  {:else}
+	    <video id="media" class="imgview" style="width: 90%" alt="{queryName}" controls>
+	      <source id="videosource">
+	    </video>
+	  {/if}
 	{:else}
 	  loading...
 	{/if}
@@ -462,7 +485,7 @@
 	{#if loading > 0}
 	  <p style="margin: 0;">loading {queryName} {Math.round(fetchProgress[index] * 100)}%...</p>
 	{:else}
-	  <p style="margin: 0;">{queryName}</p>
+	  <p style="margin: 0;"><a class="imgname" href="{imgUrl(queryName)}">{queryName}</a></p>
 	{/if}
       </div>
       <div class="caption">
