@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:experimental
 
-FROM rust:1.56-bullseye as build-rust
+FROM rust:1.57-bullseye as build-rust
 
 RUN apt-get update \
  && apt-get -y install curl build-essential clang pkg-config libjpeg-turbo-progs libpng-dev libssl-dev
@@ -8,8 +8,8 @@ RUN apt-get update \
 ENV MAGICK_VERSION 7.1
 
 WORKDIR /magick
-RUN curl https://download.imagemagick.org/ImageMagick/download/ImageMagick.tar.gz | tar xz \
- && cd ImageMagick-${MAGICK_VERSION}* \
+RUN curl https://download.imagemagick.org/archive/ImageMagick.tar.gz | tar xz
+RUN cd ImageMagick-${MAGICK_VERSION}* \
  && ./configure --with-magick-plus-plus=no --with-perl=no \
  && make -j 4 \
  && make install
@@ -32,7 +32,7 @@ RUN apt-get update \
  && apt-get -y install libx11-6 libgomp1 libjbig0 liblcms2-2 libtiff5 \
                        liblqr-1-0 libpng16-16 libdjvulibre21 libfontconfig1 \
                        libwebpmux3 libwebpdemux2 libxext6  libopenexr25 \
-                       libopenjp2-7 libssl1.1 \
+                       libopenjp2-7 libssl1.1 ffmpeg \
  && rm -rfv /var/lib/apt/lists/*
 COPY --from=build-rust /usr/local/lib /usr/local/lib
 ENV LD_LIBRARY_PATH=/usr/local/lib

@@ -28,7 +28,11 @@ pub async fn get_folder(req: Request) -> tide::Result<Body> {
         .storage
         .folder_folders(&query.dir, &query.sort, query.reverse)
         .await?;
-    Body::from_json(&responses::Folder { media, folders })
+    Body::from_json(&responses::Folder {
+        media,
+        folders,
+        page: (0, 0),
+    })
 }
 
 pub async fn get_folder_recursive(req: Request) -> tide::Result<Body> {
@@ -39,7 +43,10 @@ pub async fn get_folder_recursive(req: Request) -> tide::Result<Body> {
         .storage
         .folder_media_recursive(&query.dir)
         .await?;
-    Body::from_json(&responses::FolderRecursive { media })
+    Body::from_json(&responses::FolderRecursive {
+        media,
+        page: (0, 0),
+    })
 }
 
 pub async fn get_thumb(req: Request) -> tide::Result<Response> {

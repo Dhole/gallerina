@@ -22,6 +22,10 @@ pub mod queries {
         true
     }
 
+    fn page_default() -> usize {
+        0
+    }
+
     #[derive(Debug, Deserialize)]
     pub struct FolderQuery {
         pub dir: String,
@@ -29,6 +33,8 @@ pub mod queries {
         pub sort: Sort,
         #[serde(default = "reverse_default")]
         pub reverse: bool,
+        #[serde(default = "page_default")]
+        pub page: usize,
     }
 
     #[derive(Debug, Deserialize)]
@@ -53,11 +59,13 @@ pub mod responses {
     pub struct Folder {
         pub media: Vec<views::MediaData>,
         pub folders: Vec<views::FolderData>,
+        pub page: (usize, usize), // page n out of m
     }
 
     #[derive(Debug, Serialize)]
     pub struct FolderRecursive {
         pub media: Vec<views::MediaDataDir>,
+        pub page: (usize, usize), // page n out of m
     }
 
     #[derive(Debug, Serialize)]

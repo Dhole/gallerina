@@ -157,7 +157,7 @@ impl<'a> Storage {
         reverse: bool,
     ) -> Result<Vec<views::MediaData>, sqlx::Error> {
         sqlx::query_as(&format!(
-            "SELECT name FROM image WHERE dir = ? ORDER BY {order_by} {order}",
+            "SELECT name FROM image WHERE dir = ? ORDER BY {order_by} COLLATE NOCASE {order}",
             order = if reverse { "DESC" } else { "ASC" },
             order_by = match sort {
                 queries::Sort::Name => "name",
@@ -183,7 +183,7 @@ impl<'a> Storage {
                 LEFT JOIN image ON image.dir = folder.path
             WHERE folder.dir = ?
             GROUP BY folder.name
-            ORDER BY {order_by} {order}",
+            ORDER BY {order_by} COLLATE NOCASE {order}",
             order = if reverse { "DESC" } else { "ASC" },
             order_by = match sort {
                 queries::Sort::Name => "folder.name",

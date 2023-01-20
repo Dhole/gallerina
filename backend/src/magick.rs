@@ -1,4 +1,4 @@
-use magick_rust::{magick_wand_genesis, MagickWand};
+use magick_rust::{magick_wand_genesis, MagickError, MagickWand};
 use std::sync::Once;
 
 use crate::scanner::{THUMB_QUALITY, THUMB_SIZE};
@@ -7,7 +7,7 @@ use crate::scanner::{THUMB_QUALITY, THUMB_SIZE};
 // do not bother shutting down, we simply exit when we're done.
 static START: Once = Once::new();
 
-pub fn make_thumb(path: &str) -> Result<Vec<u8>, &'static str> {
+pub fn make_thumb(path: &str) -> Result<Vec<u8>, MagickError> {
     START.call_once(|| {
         magick_wand_genesis();
     });

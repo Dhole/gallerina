@@ -26,6 +26,7 @@ use std::time;
 use std::time::Duration;
 
 use crate::exif::{Exif, Rotation};
+use crate::ffmpeg;
 use crate::magick;
 use crate::models::tables;
 use crate::models::views;
@@ -305,7 +306,8 @@ pub enum ThumbError {
     IsMediaError(IsMediaError),
     ImageError(ImageError),
     Io(io::Error),
-    Magick(&'static str),
+    Magick(magick_rust::MagickError),
+    Ffmpeg(String),
 }
 
 impl From<ImageError> for ThumbError {
@@ -339,8 +341,12 @@ where
     P: AsRef<Path>,
 {
     let filepath = filepath.as_ref();
-    let thumb =
-        magick::make_thumb(&*filepath.to_string_lossy()).map_err(|err| ThumbError::Magick(err))?;
+    let ext = filepath.extension().unwrap_or_default().to_string_lossy();
+    let thumb = if ext == "mp4" {
+        ffmpeg::make_thumb(&*filepath.to_string_lossy())
+    } else {
+        magick::make_thumb(&*filepath.to_string_lossy()).map_err(|err| ThumbError::Magick(err))
+    }?;
     return Ok(thumb);
     /*
     let ext = is_media(filepath)?.ok_or(ThumbError::NotMedia)?;
