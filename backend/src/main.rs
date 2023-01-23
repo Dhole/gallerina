@@ -53,6 +53,14 @@ struct Args {
     /// Static directory which will be served at the root http path
     #[structopt(long = "static", parse(from_os_str))]
     static_dir: Option<PathBuf>,
+
+    /// Directory with sqlite3 hash dynamic library
+    #[structopt(long = "lib_dir", parse(from_os_str))]
+    lib_dir: Option<PathBuf>,
+
+    /// Number of images per page
+    #[structopt(long = "page_size", default_value = "4096")]
+    page_size: usize,
 }
 
 #[async_std::main]
@@ -69,9 +77,11 @@ async fn main() -> tide::Result<()> {
 
     let state = state::State::new(&state::StateConfig {
         path_sqlite: &args.sqlite,
+        lib_dir: &args.lib_dir.unwrap_or(PathBuf::from("./lib")),
         path_mdb: &args.mdb,
         root: &args.root,
         n_threads: n_threads,
+        page_size: args.page_size,
     })
     .await?;
     let mut app = tide::with_state(state);

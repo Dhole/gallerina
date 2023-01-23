@@ -35,35 +35,13 @@ impl fmt::Display for ThumbError {
 
 impl Error for ThumbError {}
 
-// #[derive(Debug, Serialize, Clone, Copy)]
-// pub struct Stats {
-//     last_scan_start: Option<chrono::DateTime<Local>>,
-//     last_scan_end: Option<chrono::DateTime<Local>>,
-//     scan_folders_count: u64,
-//     scan_files_count: u64,
-//     scan_folders_total: u64,
-//     scan_files_total: u64,
-// }
-//
-// impl Stats {
-//     pub fn new() -> Self {
-//         Self {
-//             last_scan_start: None,
-//             last_scan_end: None,
-//             scan_folders_count: 0,
-//             scan_files_count: 0,
-//             scan_folders_total: 0,
-//             scan_files_total: 0,
-//         }
-//     }
-// }
-
 #[derive(Clone)]
 pub struct Storage {
     pub root: PathBuf,
     pub db: SqlitePool,
     pub thumb_db: heed::Database<Str, ByteSlice>,
     pub thumb_db_env: heed::Env,
+    pub page_size: usize,
 }
 
 impl<'a> Storage {
@@ -74,7 +52,7 @@ impl<'a> Storage {
             sqlx::Sqlite::create_database(cfg.path_sqlite).await?;
         }
 
-        let db = db_connection(cfg.path_sqlite).await?;
+        let db = db_connection(cfg.path_sqlite, cfg.lib_dir).await?;
 
         let env = heed::EnvOpenOptions::new()
             .map_size(256 * 1024 * 1024 * 1024) // 256 GiB
@@ -83,9 +61,10 @@ impl<'a> Storage {
 
         let mut storage = Self {
             root: cfg.root.clone(),
-            db: db,
+            db,
             thumb_db,
             thumb_db_env: env,
+            page_size: cfg.page_size,
         };
         storage.init().await?;
         Ok(storage)
@@ -143,28 +122,48 @@ impl<'a> Storage {
     pub async fn folder_media_recursive(
         &self,
         dir: &str,
+        page: usize,
+        sort: &queries::Sort,
+        seed: usize,
     ) -> Result<Vec<views::MediaDataDir>, sqlx::Error> {
-        sqlx::query_as("SELECT dir, name FROM image WHERE dir LIKE ?")
-            .bind(format!("{}%", dir))
-            .fetch_all(&self.db)
-            .await
+        let sort_random = format!("hash({} || path)", seed);
+        sqlx::query_as(&format!("SELECT dir, name, (COUNT() OVER())/{page_size}.0 AS pages FROM image WHERE dir LIKE ? ORDER BY {order_by} COLLATE NOCASE ASC LIMIT {limit} OFFSET {offset}",
+            page_size = self.page_size,
+            order_by = match sort {
+                queries::Sort::Name => "name",
+                queries::Sort::Taken => "timestamp",
+                queries::Sort::Modified => "mtime",
+                queries::Sort::Random => &sort_random,
+            },
+            limit = self.page_size,
+            offset = page * self.page_size, 
+        ))
+        .bind(format!("{}%", dir))
+        .fetch_all(&self.db)
+        .await
     }
 
     pub async fn folder_media(
         &self,
         dir: &str,
+        page: usize,
         sort: &queries::Sort,
+        seed: usize,
         reverse: bool,
     ) -> Result<Vec<views::MediaData>, sqlx::Error> {
+        let sort_random = format!("hash({} || path)", seed);
         sqlx::query_as(&format!(
-            "SELECT name FROM image WHERE dir = ? ORDER BY {order_by} COLLATE NOCASE {order}",
+            "SELECT name, (COUNT() OVER())/{page_size}.0 AS pages FROM image WHERE dir = ? ORDER BY {order_by} COLLATE NOCASE {order} LIMIT {limit} OFFSET {offset}",
+            page_size = self.page_size,
             order = if reverse { "DESC" } else { "ASC" },
             order_by = match sort {
                 queries::Sort::Name => "name",
                 queries::Sort::Taken => "timestamp",
                 queries::Sort::Modified => "mtime",
-                queries::Sort::Random => "name",
-            }
+                queries::Sort::Random => &sort_random,
+            },
+            limit = self.page_size,
+            offset = page * self.page_size, 
         ))
         .bind(dir)
         .fetch_all(&self.db)
@@ -217,15 +216,20 @@ pub struct State {
 #[derive(Debug)]
 pub struct StateConfig<'a> {
     pub path_sqlite: &'a str,
+    pub lib_dir: &'a PathBuf,
     pub path_mdb: &'a PathBuf,
     pub root: &'a PathBuf,
     pub n_threads: usize,
+    pub page_size: usize,
 }
 
-async fn db_connection(url: &str) -> Result<SqlitePool, sqlx::Error> {
+async fn db_connection(url: &str, lib_dir: &PathBuf) -> Result<SqlitePool, sqlx::Error> {
+    let mut hash_path = lib_dir.clone();
+    hash_path.push("hash");
     let mut opts = SqliteConnectOptions::from_str(url)?
         .serialized(true)
-        .busy_timeout(Duration::from_secs(3600));
+        .busy_timeout(Duration::from_secs(3600))
+        .extension(hash_path.as_path().to_string_lossy().to_string());
     opts.log_statements(LevelFilter::Debug)
         .log_slow_statements(LevelFilter::Warn, Duration::from_millis(800));
     Ok(SqlitePool::connect_with(opts).await?)

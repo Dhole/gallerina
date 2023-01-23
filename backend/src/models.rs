@@ -18,6 +18,10 @@ pub mod queries {
         Sort::Name
     }
 
+    fn seed_default() -> usize {
+        0
+    }
+
     fn reverse_default() -> bool {
         true
     }
@@ -31,6 +35,8 @@ pub mod queries {
         pub dir: String,
         #[serde(default = "sort_default")]
         pub sort: Sort,
+        #[serde(default = "seed_default")]
+        pub seed: usize,
         #[serde(default = "reverse_default")]
         pub reverse: bool,
         #[serde(default = "page_default")]
@@ -56,15 +62,26 @@ pub mod responses {
     use crate::scanner;
 
     #[derive(Debug, Serialize)]
+    pub struct MediaData {
+        pub name: String,
+    }
+
+    #[derive(Debug, Serialize)]
+    pub struct MediaDataDir {
+        pub dir: String,
+        pub name: String,
+    }
+
+    #[derive(Debug, Serialize)]
     pub struct Folder {
-        pub media: Vec<views::MediaData>,
+        pub media: Vec<MediaData>,
         pub folders: Vec<views::FolderData>,
         pub page: (usize, usize), // page n out of m
     }
 
     #[derive(Debug, Serialize)]
     pub struct FolderRecursive {
-        pub media: Vec<views::MediaDataDir>,
+        pub media: Vec<MediaDataDir>,
         pub page: (usize, usize), // page n out of m
     }
 
@@ -85,15 +102,17 @@ pub mod responses {
 pub mod views {
     use serde::Serialize;
 
-    #[derive(Debug, Serialize, sqlx::FromRow)]
+    #[derive(Debug, sqlx::FromRow)]
     pub struct MediaData {
         pub name: String,
+        pub pages: f64,
     }
 
-    #[derive(Debug, Serialize, sqlx::FromRow)]
+    #[derive(Debug, sqlx::FromRow)]
     pub struct MediaDataDir {
         pub dir: String,
         pub name: String,
+        pub pages: f64,
     }
 
     #[derive(Debug, Serialize, sqlx::FromRow)]

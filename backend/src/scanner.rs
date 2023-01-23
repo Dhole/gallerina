@@ -5,10 +5,6 @@ use async_std::task::{self, JoinHandle};
 use awaitgroup::{WaitGroup, Worker};
 use chrono::prelude::*;
 use futures::executor::ThreadPoolBuilder;
-use image::jpeg::JpegDecoder;
-use image::DynamicImage;
-use image::ImageError;
-use image::ImageOutputFormat;
 use log::{debug, error};
 use parallel_stream::{from_stream, prelude::*};
 use serde::Serialize;
@@ -18,14 +14,13 @@ use std::fmt;
 use std::mem;
 // use std::fs;
 use async_std::sync::{Arc, Mutex, RwLock};
-use std::fs::File;
 use std::io;
 use std::path::Path;
 use std::path::PathBuf;
 use std::time;
 use std::time::Duration;
 
-use crate::exif::{Exif, Rotation};
+use crate::exif::Exif;
 use crate::ffmpeg;
 use crate::magick;
 use crate::models::tables;
@@ -39,9 +34,6 @@ pub const MAX_SQL_TX_SIZE: usize = 1024;
 
 #[derive(Debug)]
 pub enum ScanError {
-    // NotMedia,
-    // PathEncoding,
-    ImageError(PathBuf, ImageError),
     Io(PathBuf, io::Error),
     Sqlx(sqlx::Error),
     Heed(heed::Error),
@@ -66,12 +58,6 @@ impl fmt::Display for ScanError {
 }
 
 impl Error for ScanError {}
-
-impl From<(PathBuf, ImageError)> for ScanError {
-    fn from(path_error: (PathBuf, ImageError)) -> Self {
-        Self::ImageError(path_error.0, path_error.1)
-    }
-}
 
 impl From<(PathBuf, io::Error)> for ScanError {
     fn from(path_error: (PathBuf, io::Error)) -> Self {
@@ -302,18 +288,10 @@ pub fn is_media(path: &Path) -> Result<Option<MediaType>, IsMediaError> {
 
 #[derive(Debug)]
 pub enum ThumbError {
-    NotMedia,
     IsMediaError(IsMediaError),
-    ImageError(ImageError),
     Io(io::Error),
     Magick(magick_rust::MagickError),
     Ffmpeg(String),
-}
-
-impl From<ImageError> for ThumbError {
-    fn from(error: ImageError) -> Self {
-        Self::ImageError(error)
-    }
 }
 
 impl From<io::Error> for ThumbError {
@@ -336,7 +314,7 @@ impl fmt::Display for ThumbError {
 
 impl Error for ThumbError {}
 
-fn make_thumb<P>(filepath: P, media_exif: &Option<Exif>) -> Result<Vec<u8>, ThumbError>
+fn make_thumb<P>(filepath: P, _media_exif: &Option<Exif>) -> Result<Vec<u8>, ThumbError>
 where
     P: AsRef<Path>,
 {
@@ -348,90 +326,7 @@ where
         magick::make_thumb(&*filepath.to_string_lossy()).map_err(|err| ThumbError::Magick(err))
     }?;
     return Ok(thumb);
-    /*
-    let ext = is_media(filepath)?.ok_or(ThumbError::NotMedia)?;
-    let img = match ext {
-        Jpeg => {
-            let f = File::open(&filepath)?;
-            let mut im = JpegDecoder::new(f)?;
-            // From `image::codecs::jpeg::JpegDecoder::scale`:
-            // This efficiently scales the image by the smallest supported scale factor that
-            // produces an image larger than or equal to the requested size in at least one axis.
-            // The currently implemented scale factors are 1/8, 1/4, 1/2 and 1.  To generate a
-            // thumbnail of an exact size, pass the desired size and then scale to the final size
-            // using a traditional resampling algorithm.
-            im.scale(THUMB_SIZE, THUMB_SIZE)?;
-            DynamicImage::from_decoder(im)?
-        }
-        _ => match image::open(&filepath) {
-            Ok(img) => img,
-            Err(img_err) => {
-                // image::open chooses the decoder by extension.  If the file has a bad extension
-                // it will return an error, so we try to bypass the extension and try with jpeg.
-                let f = File::open(&filepath)?;
-                let mut im = match JpegDecoder::new(f) {
-                    Ok(im) => im,
-                    Err(_) => {
-                        return Err(ThumbError::ImageError(img_err));
-                    }
-                };
-                im.scale(THUMB_SIZE, THUMB_SIZE)?;
-                DynamicImage::from_decoder(im)?
-            }
-        },
-    };
-    let scaled = img.thumbnail(THUMB_SIZE as u32, THUMB_SIZE as u32);
-    let mut scaled = match scaled {
-        DynamicImage::ImageRgba8(im) => DynamicImage::ImageRgba8(im),
-        dyn_ima => DynamicImage::ImageRgba8(dyn_ima.to_rgba8()),
-    };
-    if let Some(Exif {
-        orientation: Some(ori),
-        ..
-    }) = media_exif
-    {
-        debug!("Image {:?} Orientation {:?}", filepath, ori);
-        if ori.mirror {
-            scaled = scaled.fliph();
-        }
-        scaled = match ori.rotation {
-            Rotation::D0 => scaled,
-            Rotation::D90 => scaled.rotate90(),
-            Rotation::D180 => scaled.rotate180(),
-            Rotation::D270 => scaled.rotate270(),
-        };
-    }
-    // Preallocate a vector for an estimatez thumnail size
-    let mut thumb_buf = Vec::with_capacity(100 * 1024);
-    scaled.write_to(&mut thumb_buf, ImageOutputFormat::Jpeg(THUMB_QUALITY))?;
-    Ok(thumb_buf)
-    */
 }
-
-/*
-fn count_media(dir: &Path) -> u64 {
-    let count = atomic::AtomicU64::new(0);
-    WalkBuilder::new(dir)
-        .follow_links(false)
-        .build_parallel()
-        .run(|| {
-            Box::new(|result| {
-                match result {
-                    Ok(entry) => {
-                        if entry.file_type().expect("get entry file_type").is_file() {
-                            if is_media(entry.path()).unwrap_or(None).is_some() {
-                                count.fetch_add(1, atomic::Ordering::Relaxed);
-                            }
-                        }
-                    }
-                    Err(e) => println!("walk err: {:?}", e),
-                }
-                WalkState::Continue
-            })
-        });
-    count.load(atomic::Ordering::Relaxed)
-}
-*/
 
 struct CompareResult<'a> {
     new: Vec<&'a str>,
@@ -577,7 +472,7 @@ struct Indexer {
     state: Storage,
     stats: Arc<RwLock<Stats>>,
     thumbs_req: (Sender<IndexRequest>, Receiver<IndexRequest>),
-    thumbs_res: (Sender<IndexRequest>, Receiver<IndexRequest>),
+    // thumbs_res: (Sender<IndexRequest>, Receiver<IndexRequest>),
 }
 
 type Tx = sqlx::Transaction<'static, sqlx::Sqlite>;
@@ -601,14 +496,6 @@ impl<'a> Batch<'a> {
         })
     }
 
-    // pub async fn tx(&'a mut self) -> Result<&'a mut Tx, sqlx::Error> {
-    //     self.count += 1;
-    //     if self.count >= self.max {
-    //         self.commit_begin().await?;
-    //     }
-    //     Ok(&mut self.tx)
-    // }
-
     async fn inc_maybe_commit_begin(&mut self) -> Result<(), sqlx::Error> {
         self.count += 1;
         if self.count >= self.max {
@@ -631,7 +518,6 @@ use futures_core::future::BoxFuture;
 use futures_core::stream::BoxStream;
 // use futures_core::Stream;
 use async_stream::stream;
-use futures::SinkExt;
 use sqlx::sqlite::{SqliteQueryResult, SqliteRow, SqliteStatement, SqliteTypeInfo};
 use sqlx::Describe;
 use sqlx::Execute;
@@ -642,7 +528,7 @@ impl<'c> sqlx::Executor<'c> for &'c mut Batch<'_> {
     type Database = sqlx::Sqlite;
     fn fetch_many<'e, 'q: 'e, E: 'q>(
         self,
-        mut query: E,
+        query: E,
     ) -> BoxStream<'e, Result<Either<SqliteQueryResult, SqliteRow>, sqlx::Error>>
     where
         'c: 'e,
@@ -658,7 +544,7 @@ impl<'c> sqlx::Executor<'c> for &'c mut Batch<'_> {
 
     fn fetch_optional<'e, 'q: 'e, E: 'q>(
         self,
-        mut query: E,
+        query: E,
     ) -> BoxFuture<'e, Result<Option<SqliteRow>, sqlx::Error>>
     where
         'c: 'e,
@@ -732,7 +618,7 @@ impl Indexer {
                 state,
                 stats,
                 thumbs_req: thumbs_req.clone(),
-                thumbs_res: thumbs_res.clone(),
+                // thumbs_res: thumbs_res.clone(),
             },
             IndexerHandle {
                 stop,

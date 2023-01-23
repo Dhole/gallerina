@@ -21,17 +21,30 @@ pub async fn get_folder(req: Request) -> tide::Result<Body> {
     let media = req
         .state()
         .storage
-        .folder_media(&query.dir, &query.sort, query.reverse)
+        .folder_media(
+            &query.dir,
+            query.page,
+            &query.sort,
+            query.seed,
+            query.reverse,
+        )
         .await?;
+    let page = (
+        query.page,
+        media.get(0).map(|m| m.pages.ceil() as usize).unwrap_or(0),
+    );
     let folders = req
         .state()
         .storage
         .folder_folders(&query.dir, &query.sort, query.reverse)
         .await?;
     Body::from_json(&responses::Folder {
-        media,
+        media: media
+            .into_iter()
+            .map(|m| responses::MediaData { name: m.name })
+            .collect(),
         folders,
-        page: (0, 0),
+        page,
     })
 }
 
@@ -41,11 +54,21 @@ pub async fn get_folder_recursive(req: Request) -> tide::Result<Body> {
     let media = req
         .state()
         .storage
-        .folder_media_recursive(&query.dir)
+        .folder_media_recursive(&query.dir, query.page, &query.sort, query.seed)
         .await?;
+    let page = (
+        query.page,
+        media.get(0).map(|m| m.pages.ceil() as usize).unwrap_or(0),
+    );
     Body::from_json(&responses::FolderRecursive {
-        media,
-        page: (0, 0),
+        media: media
+            .into_iter()
+            .map(|m| responses::MediaDataDir {
+                dir: m.dir,
+                name: m.name,
+            })
+            .collect(),
+        page,
     })
 }
 
