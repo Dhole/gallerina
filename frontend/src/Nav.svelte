@@ -1,4 +1,5 @@
 <script>
+  import { emptyCfg, cfg2str } from './globals.ts';
   import { onMount } from 'svelte';
   let view = "";
   onMount(() => {
@@ -9,9 +10,9 @@
 
 <nav class="tabs">
   {#if view === "folder"}
-    <a href="?view=folder&sort=name&reverse=false&dir=/" class="active">Folder</a>
+    <a href="?view=folder&dir=/&page=0&cfg={cfg2str(emptyCfg)}" class="active">Folder</a>
   {:else}
-    <a href="?view=folder&sort=name&reverse=false&dir=/">Folder</a>
+    <a href="?view=folder&dir=/&page=0&cfg={cfg2str(emptyCfg)}">Folder</a>
   {/if}
 
   {#if view === "control"}

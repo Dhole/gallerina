@@ -597,7 +597,7 @@ button:disabled:hover {
   background-color: var(--color-primary);
 }
 .button.secondary {
-  background-color: var(--color-grey);
+  background-color: var(--bg-secondary-color);
 }
 .button.dark {
   background-color: var(--color-darkGrey);
@@ -610,7 +610,7 @@ button:disabled:hover {
 }
 .button.outline {
   background-color: transparent;
-  border-color: var(--color-lightGrey);
+  border-color: var(--font-color);
 }
 .button.outline.primary {
   border-color: var(--color-primary);

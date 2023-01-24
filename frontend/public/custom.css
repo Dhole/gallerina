@@ -244,3 +244,11 @@ flex-flow: row wrap;
   transform: rotate(-90deg);
   transform-origin: 50% 50%;
 }
+.disabled {
+  pointer-events: none;
+  cursor: default;
+  background-color: var(--color-grey);
+}
+.long {
+  width: 5em;
+}

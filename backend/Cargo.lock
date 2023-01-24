@@ -417,7 +417,6 @@ dependencies = [
  "heed",
  "http-types",
  "kamadak-exif",
- "libc",
  "log",
  "magick_rust",
  "num_cpus",
