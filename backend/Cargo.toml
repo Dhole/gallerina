@@ -39,8 +39,8 @@ magick_rust = "0.17.0"
 either = "1.6.1"
 futures-core = "0.3.17"
 async-stream = "0.3.2"
-tempfile = "3.3"
-libc = "0.2.0"
+# tempfile = "3.3"
+# libc = "0.2.0"
 
 # [patch.crates-io]
 # magick_rust = { git = "https://github.com/nlfiedler/magick-rust", rev = "2e843d7336cd435dbd57f77a42481e332d3fe4e6" }

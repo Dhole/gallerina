@@ -76,13 +76,17 @@ pub mod responses {
     pub struct Folder {
         pub media: Vec<MediaData>,
         pub folders: Vec<views::FolderData>,
-        pub page: (usize, usize), // page n out of m
+        pub page: usize,
+        pub page_size: usize,
+        pub total: usize,
     }
 
     #[derive(Debug, Serialize)]
     pub struct FolderRecursive {
         pub media: Vec<MediaDataDir>,
-        pub page: (usize, usize), // page n out of m
+        pub page: usize,
+        pub page_size: usize,
+        pub total: usize,
     }
 
     #[derive(Debug, Serialize)]
@@ -105,14 +109,14 @@ pub mod views {
     #[derive(Debug, sqlx::FromRow)]
     pub struct MediaData {
         pub name: String,
-        pub pages: f64,
+        pub total: i64,
     }
 
     #[derive(Debug, sqlx::FromRow)]
     pub struct MediaDataDir {
         pub dir: String,
         pub name: String,
-        pub pages: f64,
+        pub total: i64,
     }
 
     #[derive(Debug, Serialize, sqlx::FromRow)]

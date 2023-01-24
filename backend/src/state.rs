@@ -127,8 +127,7 @@ impl<'a> Storage {
         seed: usize,
     ) -> Result<Vec<views::MediaDataDir>, sqlx::Error> {
         let sort_random = format!("hash({} || path)", seed);
-        sqlx::query_as(&format!("SELECT dir, name, (COUNT() OVER())/{page_size}.0 AS pages FROM image WHERE dir LIKE ? ORDER BY {order_by} COLLATE NOCASE ASC LIMIT {limit} OFFSET {offset}",
-            page_size = self.page_size,
+        sqlx::query_as(&format!("SELECT dir, name, COUNT() OVER() AS total FROM image WHERE dir LIKE ? ORDER BY {order_by} COLLATE NOCASE ASC LIMIT {limit} OFFSET {offset}",
             order_by = match sort {
                 queries::Sort::Name => "name",
                 queries::Sort::Taken => "timestamp",
@@ -136,7 +135,7 @@ impl<'a> Storage {
                 queries::Sort::Random => &sort_random,
             },
             limit = self.page_size,
-            offset = page * self.page_size, 
+            offset = page * self.page_size,
         ))
         .bind(format!("{}%", dir))
         .fetch_all(&self.db)
@@ -153,8 +152,7 @@ impl<'a> Storage {
     ) -> Result<Vec<views::MediaData>, sqlx::Error> {
         let sort_random = format!("hash({} || path)", seed);
         sqlx::query_as(&format!(
-            "SELECT name, (COUNT() OVER())/{page_size}.0 AS pages FROM image WHERE dir = ? ORDER BY {order_by} COLLATE NOCASE {order} LIMIT {limit} OFFSET {offset}",
-            page_size = self.page_size,
+            "SELECT name, COUNT() OVER() AS total FROM image WHERE dir = ? ORDER BY {order_by} COLLATE NOCASE {order} LIMIT {limit} OFFSET {offset}",
             order = if reverse { "DESC" } else { "ASC" },
             order_by = match sort {
                 queries::Sort::Name => "name",

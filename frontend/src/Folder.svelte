@@ -1,22 +1,25 @@
 <script>
-  import { FileType, serverUrl, apiUrl, uiUrl, emptyCfg, cfg2str, str2cfg, trimPrefix, shuffleArray, isImg } from './globals.ts';
+  import { FileType, serverUrl, apiUrl, uiUrl, emptyCfg, cfg2str, str2cfg, trimPrefix, isImg } from './globals.ts';
   import { onMount, beforeUpdate } from 'svelte';
   import Nav from './Nav.svelte';
 
   let queryDirSplit = [];
   let queryDir = "";
+  let queryPage = null;
+  let totalPages = null;
+  let footerPages = null;
   let cleanDir = "";
   let queryCfg = emptyCfg;
   let paramItems = [];
 
   function reload() {
     let base = window.location.origin + window.location.pathname;
-    window.location.replace(`${base}?view=folder&dir=${queryDir}&cfg=${cfg2str(queryCfg)}`);
+    window.location.replace(`${base}?view=folder&dir=${queryDir}&page=${queryPage}&cfg=${cfg2str(queryCfg)}`);
   }
 
   function updateUrl() {
     let base = window.location.pathname;
-    history.replaceState(null, '', `${base}?view=folder&dir=${queryDir}&cfg=${cfg2str(queryCfg)}`);
+    history.replaceState(null, '', `${base}?view=folder&dir=${queryDir}&page=${queryPage}&cfg=${cfg2str(queryCfg)}`);
   }
 
   function bumpRandom() {
@@ -29,6 +32,9 @@
     let urlParams = new URLSearchParams(window.location.search);
     let dir = urlParams.get('dir');
     queryDir = dir;
+    var page = parseInt(urlParams.get('page'), 10);
+    page = isNaN(page) ? 0 : page;
+    queryPage = page;
     cleanDir = queryDir === "/" ? "" : queryDir;
     let cfg = urlParams.get('cfg');
     cfg = cfg == null ? emptyCfg : str2cfg(cfg);
@@ -51,15 +57,16 @@
 
     let items = [];
     if (cfg.recursive === false) {
-      let folderUrl = apiUrl('folder', {'sort':cfg.sort, 'reverse': cfg.reverse, 'dir': dir});
+      let folderUrl = apiUrl('folder', {'sort':cfg.sort, 'reverse':cfg.reverse, 'dir':dir, 'page':page, 'seed':cfg.randSeed});
       if (dir !== "/") {
 	folderUrl = folderUrl.replace(/\/$/, '');
       }
       const res = await fetch(folderUrl);
       let folder = await res.json();
-      if (cfg.sort === "random") {
-	shuffleArray(folder.media, cfg.randSeed);
-      }
+      totalPages = Math.ceil(folder.total / folder.page_size);
+      // if (cfg.sort === "random") {
+      //   shuffleArray(folder.media, cfg.randSeed);
+      // }
       folder.folders.forEach((folder) => {
 	items.push({typ: FileType.Folder, name: folder.name, media: folder.media});
       })
@@ -67,22 +74,24 @@
 	items.push({typ: FileType.Image, name: media.name});
       });
     } else {
-      let folderUrl = apiUrl('folderRecursive', {'dir': dir});
+      let folderUrl = apiUrl('folderRecursive', {'sort':cfg.sort, 'dir':dir, 'page':page, 'seed':cfg.randSeed});
       if (dir !== "/") {
 	folderUrl = folderUrl.replace(/\/$/, '');
       }
       const res = await fetch(folderUrl);
       let folder = await res.json();
+      totalPages = Math.ceil(folder.total / folder.page_size);
 
-      if (cfg.sort === "random") {
-	shuffleArray(folder.media, cfg.randSeed);
-      }
+      // if (cfg.sort === "random") {
+      //   shuffleArray(folder.media, cfg.randSeed);
+      // }
       folder.media.forEach((media) => {
 	let name = `${trimPrefix(media.dir, dir)}/${media.name}`;
 	name = trimPrefix(name, "/");
 	items.push({typ: FileType.Image, name: name});
       });
     }
+    footerPages = [-2, -1, 0, 1, 2].map((i) => queryPage + i).filter((p) => p >= 0 && p < totalPages);
     paramItems = items;
   });
 </script>
@@ -92,7 +101,7 @@
 
   <h1>
 {#each queryDirSplit as elem}
-  <a href="{uiUrl({'view':'folder', 'dir': elem.dir, 'cfg': cfg2str(queryCfg)})}">
+  <a href="{uiUrl({'view':'folder', 'dir':elem.dir, 'page':0, 'cfg':cfg2str(queryCfg)})}">
     {elem.name}
   </a>
 {:else}
@@ -152,7 +161,7 @@
 	<div class="itemBox">
 	  {#if item === null}
 	  {:else if item.typ === FileType.Folder}
-	  <a class="itemImage" href="{uiUrl({'view':'folder', 'dir':`${cleanDir}/${item.name}`, 'cfg':`${(cfg2str(queryCfg))}`})}">
+	  <a class="itemImage" href="{uiUrl({'view':'folder', 'dir':`${cleanDir}/${item.name}`, 'page':0, 'cfg':`${(cfg2str(queryCfg))}`})}">
 	      <div class="folderlabel">{item.name}</div>
 	      <div class="folder itemLink">
 		{#if item.media !== null}
@@ -176,7 +185,7 @@
 	      </a>
 	      {:else}
 	      <a class="itemLink2"
-		href="{uiUrl({'view':'media', 'dir':queryDir, 'name':item.name, 'cfg':cfg2str(queryCfg)})}">
+		href="{uiUrl({'view':'media', 'dir':queryDir, 'name':item.name, 'page':0, 'cfg':cfg2str(queryCfg)})}">
 		{#if isImg(item.name)}
 		<img class="gridImage image" loading="lazy"
 		  src="{apiUrl('thumb', {'path':`${cleanDir}/${item.name}`})}">
@@ -193,6 +202,36 @@
     </div>
   {/each}
 {/if}
+</div>
+<!-- footer -->
+<div class="caption">
+  {#if footerPages}
+    {#if queryPage === 0}
+      <a class="button long disabled">⬅</a>
+    {:else}
+      <a href="{uiUrl({'view':'folder', 'dir':queryDir, 'page':queryPage-1, 'cfg':cfg2str(queryCfg)})}" class="button long primary">⬅</a>
+    {/if}
+    {#if footerPages[0] != 0}
+      <a href="{uiUrl({'view':'folder', 'dir':queryDir, 'page':0, 'cfg':cfg2str(queryCfg)})}" class="button primary">0</a>
+      <a class="button disabled clear">...</a>
+    {/if}
+    {#each footerPages as page}
+      {#if page === queryPage}
+	<a class="button disabled outline">{page}</a>
+      {:else}
+	<a href="{uiUrl({'view':'folder', 'dir':queryDir, 'page':page, 'cfg':cfg2str(queryCfg)})}" class="button primary">{page}</a>
+      {/if}
+    {/each}
+    {#if footerPages[footerPages.length-1] != totalPages-1}
+      <a class="button disabled clear">...</a>
+      <a href="{uiUrl({'view':'folder', 'dir':queryDir, 'page':totalPages-1, 'cfg':cfg2str(queryCfg)})}" class="button primary">{totalPages-1}</a>
+    {/if}
+    {#if queryPage === totalPages-1}
+      <a class="button long disabled">➡</a>
+    {:else}
+      <a href="{uiUrl({'view':'folder', 'dir':queryDir, 'page':queryPage+1, 'cfg':cfg2str(queryCfg)})}" class="button long primary">➡</a>
+    {/if}
+  {/if}
 </div>
 </div>
 

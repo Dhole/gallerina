@@ -1,14 +1,18 @@
 <script>
-  import { FileType, serverUrl, apiUrl, uiUrl, defaultPlaySecs, emptyCfg, cfg2str, str2cfg, trimPrefix, shuffleArray, isImg } from './globals.ts';
+  import { FileType, serverUrl, apiUrl, uiUrl, defaultPlaySecs, emptyCfg, cfg2str, str2cfg, trimPrefix, isImg } from './globals.ts';
   import { onMount, beforeUpdate } from 'svelte';
 
   let queryPathSplit = [];
   // let paramItems = [];
   let queryDir = "";
+  let queryPage = null;
+  let total = null;
+  let pageSize = null;
+  let totalPages = null;
   let cleanDir = "";
   let queryName = "";
   let queryCfg = emptyCfg;
-  let folder = [];
+  let pages = null;
   // mediasData is an array of length mediasLength that either has null or a
   // promise with the image blob.
   let mediasData = [];
@@ -77,7 +81,7 @@
   }
 
   function urlPath() {
-    return uiUrl({'view':'media', 'cfg':cfg2str(queryCfg), 'dir':queryDir, 'name':queryName});
+    return uiUrl({'view':'media', 'cfg':cfg2str(queryCfg), 'dir':queryDir, 'name':queryName, 'page':queryPage});
   }
 
   const cachePrev = 2;
@@ -213,7 +217,8 @@
 	}
       }
     }
-    const name = folder.media[ind].name;
+    const media = await getMedia(ind)
+    const name = media.name;
     const url = imgUrl(name);
     fetchIndex = ind;
     var controller = new AbortController();
@@ -249,10 +254,51 @@
     return mediasData[ind];
   }
 
+  let getPage = async(page) => {
+    let items = [];
+    let _pageSize = 0;
+    let _total = 0;
+    let cfg = queryCfg;
+    let dir = queryDir;
+    if (cfg.recursive === false) {
+      let folderUrl = apiUrl('folder', {'sort':cfg.sort, 'reverse':cfg.reverse, 'dir':dir, 'page':page, 'seed':cfg.randSeed});
+      try {
+	const res = await fetch(folderUrl);
+	let _folder = await res.json();
+	_total = _folder.total;
+	_pageSize = _folder.page_size;
+	items = _folder.media;
+      } catch(err) {
+	return;
+      }
+    } else {
+      let folderUrl = apiUrl('folderRecursive', {'sort':cfg.sort, 'dir': dir, 'page':page, 'seed':cfg.randSeed});
+      const res = await fetch(folderUrl);
+      let _folder = await res.json();
+      _total = _folder.total;
+      _pageSize = _folder.page_size;
+      _folder.media.forEach((media) => {
+	let name = `${trimPrefix(media.dir, dir)}/${media.name}`;
+	name = trimPrefix(name, "/");
+	items.push({ name: name});
+      });
+    }
+    return { items: items, pageSize: _pageSize, total: _total };
+  }
+
+  let getMedia = async (ind) => {
+    let page = Math.floor(ind / pageSize);
+    if (pages[page] === null) {
+      pages[page] = (await getPage(page)).items;
+    }
+    return pages[page][ind % pageSize];
+  }
+
   let loading = -1;
   let load = async (ind) => {
     loading += 1;
-    queryName = folder.media[ind].name;
+    const media = await getMedia(ind);
+    queryName = media.name;
     window.history.replaceState({}, null, urlPath());
     var urlCreator = window.URL || window.webkitURL;
     let blob = await getImgBlob(ind);
@@ -391,6 +437,8 @@
     let urlParams = new URLSearchParams(window.location.search);
     let dir = urlParams.get('dir');
     queryDir = dir;
+    var page = parseInt(urlParams.get('page'), 10);
+    queryPage = page;
     cleanDir = queryDir === "/" ? "" : queryDir;
     let name = urlParams.get('name');
     queryName = name;
@@ -403,36 +451,22 @@
     }
     queryPathSplit = pathSplit;
 
-    let items = []
-    if (cfg.recursive === false) {
-      let folderUrl = apiUrl('folder', {'sort':cfg.sort, 'reverse':cfg.reverse, 'dir': dir});
-      try {
-	const res = await fetch(folderUrl);
-	let _folder = await res.json();
-	items = _folder.media;
-      } catch(err) {
-	return;
-      }
-    } else {
-      let folderUrl = apiUrl('folderRecursive', {'dir': dir});
-      const res = await fetch(folderUrl);
-      let _folder = await res.json();
-      _folder.media.forEach((media) => {
-	let name = `${trimPrefix(media.dir, dir)}/${media.name}`;
-	name = trimPrefix(name, "/");
-	items.push({ name: name});
-      });
-    }
-    if (cfg.sort === "random") {
-      shuffleArray(items, cfg.randSeed);
-    }
-    folder = { media: items };
-    mediasLength = folder.media.length;
+    let _page = await getPage(page);
+    let items = _page.items;
+    total = _page.total;
+    pageSize = _page.pageSize;
+    totalPages = Math.ceil(total / pageSize);
+    // if (cfg.sort === "random") {
+    //   shuffleArray(items, cfg.randSeed);
+    // }
+    pages = new Array(totalPages).fill(null);
+    pages[queryPage] = items;
+    mediasLength = total;
     mediasData = new Array(mediasLength).fill(null);
     fetchController = new Array(mediasLength).fill(null);
     fetchProgress = new Array(mediasLength).fill(0);
     loading = 0;
-    index = folder.media.findIndex((media) => { return media.name === queryName; });
+    index = items.findIndex((media) => { return media.name === queryName; }) + queryPage * pageSize;
     indexP1 = index+1;
     await load(index);
   });

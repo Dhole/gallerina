@@ -11,7 +11,7 @@ onMount(() => {
     view = urlParams.get('view');
     if (window.location.search === "") {
       let base = window.location.origin + window.location.pathname;
-      window.location.replace(`${base}?view=folder&dir=/&cfg=${cfg2str(emptyCfg)}`);
+      window.location.replace(`${base}?view=folder&dir=/&page=0&cfg=${cfg2str(emptyCfg)}`);
     }
 });
 </script>
