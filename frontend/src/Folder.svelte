@@ -185,7 +185,7 @@
 	      </a>
 	      {:else}
 	      <a class="itemLink2"
-		href="{uiUrl({'view':'media', 'dir':queryDir, 'name':item.name, 'page':0, 'cfg':cfg2str(queryCfg)})}">
+		href="{uiUrl({'view':'media', 'dir':queryDir, 'name':item.name, 'page':queryPage, 'cfg':cfg2str(queryCfg)})}">
 		{#if isImg(item.name)}
 		<img class="gridImage image" loading="lazy"
 		  src="{apiUrl('thumb', {'path':`${cleanDir}/${item.name}`})}">

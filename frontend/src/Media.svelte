@@ -299,6 +299,7 @@
     loading += 1;
     const media = await getMedia(ind);
     queryName = media.name;
+    queryPage = Math.floor(ind / pageSize);
     window.history.replaceState({}, null, urlPath());
     var urlCreator = window.URL || window.webkitURL;
     let blob = await getImgBlob(ind);
