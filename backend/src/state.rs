@@ -129,7 +129,7 @@ impl<'a> Storage {
         let sort_random = format!("hash({} || path)", seed);
         sqlx::query_as(&format!("SELECT dir, name, COUNT() OVER() AS total FROM image WHERE dir LIKE ? ORDER BY {order_by} COLLATE NOCASE ASC LIMIT {limit} OFFSET {offset}",
             order_by = match sort {
-                queries::Sort::Name => "name",
+                queries::Sort::Name => "path",
                 queries::Sort::Taken => "timestamp",
                 queries::Sort::Modified => "mtime",
                 queries::Sort::Random => &sort_random,
@@ -155,7 +155,7 @@ impl<'a> Storage {
             "SELECT name, COUNT() OVER() AS total FROM image WHERE dir = ? ORDER BY {order_by} COLLATE NOCASE {order} LIMIT {limit} OFFSET {offset}",
             order = if reverse { "DESC" } else { "ASC" },
             order_by = match sort {
-                queries::Sort::Name => "name",
+                queries::Sort::Name => "path",
                 queries::Sort::Taken => "timestamp",
                 queries::Sort::Modified => "mtime",
                 queries::Sort::Random => &sort_random,

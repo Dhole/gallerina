@@ -91,6 +91,7 @@
 	items.push({typ: FileType.Image, name: name});
       });
     }
+    totalPages = totalPages > 0 ? totalPages : 1;
     footerPages = [-2, -1, 0, 1, 2].map((i) => queryPage + i).filter((p) => p >= 0 && p < totalPages);
     paramItems = items;
   });

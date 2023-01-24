@@ -11,7 +11,9 @@ services:
     environment:
       # Choose a different value to limit the number of threads for thumbnail
       # creation.  0 will default to the number of CPU cores detected.
-      - GALLERINA_THREADS=0
+      - GALLERINA_THREADS=6
+      - GALLERINA_LOG=debug
+      - GALLERINA_PAGE_SIZE=1024
     volumes:
       # Choose a folder where the database will be stored.
       - /path/to/database:/app/db:delegated

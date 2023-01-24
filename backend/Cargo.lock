@@ -408,7 +408,6 @@ dependencies = [
  "async-std",
  "async-stream",
  "awaitgroup",
- "cc",
  "chrono",
  "either",
  "env_logger",

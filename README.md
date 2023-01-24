@@ -11,15 +11,18 @@ Gallerina is a simple self-hosted photo gallery with a focus on performance.
 # Features
 
 - Supports multiple image formats: `JPEG`, `PNG`, `GIF`.
+- Support video file formats: `MP4`.
 - Parsing of EXIF metadata to index photos by taken date.
-- Sorting by: name, file modification date, taken date (EXIF).
+- Sorting by: name, file modification date, taken date (EXIF) and random.
 - Parallel directory scanning and thumbnail creation.
 - Differential update when re-scanning the image directory.
+- Recursive mode to view all images in sub-folders.
+- Pagination support.
 
 ## Frontend
 
 - Lazy loading of thumbnails in folder view
-- No infinite scroll
+- No infinite scroll (Pagination with manual page switching)
 - Mouse or keyboard media view navigation
 - Full screen support.  
     - In media view, click image for fullscreen; then click left area or right area to navigate, or use the left and arrow keys.
@@ -48,7 +51,9 @@ services:
     environment:
       # Choose a different value to limit the number of threads for thumbnail
       # creation.  0 will default to the number of CPU cores detected.
-      - GALLERINA_THREADS=0
+      - GALLERINA_THREADS=6
+      - GALLERINA_LOG=debug
+      - GALLERINA_PAGE_SIZE=1024
     volumes:
       # Choose a folder where the database will be stored.
       - /path/to/database:/app/db:delegated
@@ -68,7 +73,7 @@ Scan` button in the `Control` tab.
 
 # Roadmap
 
-- Add support for video media
+- [x] Add support for video media
 - Add fallback thumbnail creation tool
 - Add support for symbolic links (for folders and media files)
 - Add search support

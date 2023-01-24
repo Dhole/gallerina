@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:experimental
 
-FROM rust:1.57-bullseye as build-rust
+FROM rust:1.64-bullseye as build-rust
 
 RUN apt-get update \
  && apt-get -y install curl build-essential clang pkg-config libjpeg-turbo-progs libpng-dev libssl-dev
@@ -15,6 +15,7 @@ RUN cd ImageMagick-${MAGICK_VERSION}* \
  && make install
 
 WORKDIR /backend
+RUN mkdir -p /backend/lib
 COPY backend .
 RUN --mount=type=cache,sharing=locked,id=cargotarget,target=/backend/target cargo build --release
 RUN --mount=type=cache,sharing=locked,id=cargotarget,target=/backend/target cp /backend/target/release/backend /backend/backend
@@ -49,9 +50,7 @@ RUN apt-get update \
 
 WORKDIR /app
 COPY --from=build-rust /backend/backend gallerina
+COPY --from=build-rust /backend/lib lib
 COPY --from=build-node /frontend/public static
 RUN mkdir -p /app/db
-# ENTRYPOINT /app/gallerina
-ENV THREADS=${GALLERINA_THREADS:-0}
-ENV RUST_LOG=${GALLERINA_LOG:-info}
-ENTRYPOINT /app/gallerina --addr 0.0.0.0:8080 --sqlite /app/db/db.sqlite --mdb /app/db/mdb --root /app/media --static /app/static --threads $THREADS
+ENTRYPOINT RUST_LOG=${GALLERINA_LOG:-info} /app/gallerina --addr 0.0.0.0:8080 --sqlite /app/db/db.sqlite --mdb /app/db/mdb --root /app/media --static /app/static --lib_dir /app/lib --threads ${GALLERINA_THREADS:-0} --page_size ${GALLERINA_PAGE_SIZE:-4096}
