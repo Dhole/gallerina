@@ -319,7 +319,11 @@ where
     P: AsRef<Path>,
 {
     let filepath = filepath.as_ref();
-    let ext = filepath.extension().unwrap_or_default().to_string_lossy();
+    let ext = filepath
+        .extension()
+        .unwrap_or_default()
+        .to_string_lossy()
+        .to_lowercase();
     let thumb = if ext == "mp4" {
         ffmpeg::make_thumb(&*filepath.to_string_lossy())
     } else {
