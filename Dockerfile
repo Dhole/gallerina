@@ -9,6 +9,7 @@ ENV MAGICK_VERSION 7.1
 
 WORKDIR /magick
 RUN curl https://download.imagemagick.org/archive/ImageMagick.tar.gz | tar xz
+# RUN curl  https://download.imagemagick.org/archive/ImageMagick-7.1.1-23.tar.gz| tar xz
 RUN cd ImageMagick-${MAGICK_VERSION}* \
  && ./configure --with-magick-plus-plus=no --with-perl=no \
  && make -j 4 \
@@ -52,5 +53,6 @@ WORKDIR /app
 COPY --from=build-rust /backend/backend gallerina
 COPY --from=build-rust /backend/lib lib
 COPY --from=build-node /frontend/public static
+RUN chmod -R a+rX gallerina lib static
 RUN mkdir -p /app/db
 ENTRYPOINT RUST_LOG=${GALLERINA_LOG:-info} /app/gallerina --addr 0.0.0.0:8080 --sqlite /app/db/db.sqlite --mdb /app/db/mdb --root /app/media --static /app/static --lib_dir /app/lib --threads ${GALLERINA_THREADS:-0} --page_size ${GALLERINA_PAGE_SIZE:-4096}
