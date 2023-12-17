@@ -136,16 +136,22 @@
       <input style="top: 42%" class="vcenter" type="checkbox" id="reverse" bind:checked={queryCfg.reverse} on:change={reload}>
     </div>
     <div style="margin-left: 1em; margin-right: 0.4em">
+      <label class="vcenter" for="recursive">recursive</label>
+    </div>
+    <div>
+      <input style="top: 42%" class="vcenter" type="checkbox" id="recursive" bind:checked={queryCfg.recursive} on:change={reload}>
+    </div>
+    <div style="margin-left: 1em; margin-right: 0.4em">
       <label class="vcenter" for="raw">raw</label>
     </div>
     <div>
       <input style="top: 42%" class="vcenter" type="checkbox" id="raw" bind:checked={queryCfg.raw} on:change={updateUrl}>
     </div>
     <div style="margin-left: 1em; margin-right: 0.4em">
-      <label class="vcenter" for="recursive">recursive</label>
+      <label class="vcenter" for="loop">loop</label>
     </div>
     <div>
-      <input style="top: 42%" class="vcenter" type="checkbox" id="recursive" bind:checked={queryCfg.recursive} on:change={reload}>
+      <input style="top: 42%" class="vcenter" type="checkbox" id="loop" bind:checked={queryCfg.loop} on:change={updateUrl}>
     </div>
 
   </div>

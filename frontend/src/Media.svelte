@@ -507,9 +507,15 @@
 	  {#if isImg(queryName)}
 	    <img id="media" class="imgview" alt="{queryName}">
 	  {:else}
-	    <video id="media" class="imgview" style="width: 90%" alt="{queryName}" controls>
-	      <source id="videosource">
-	    </video>
+	      {#if queryCfg.loop}
+		<video id="media" class="imgview" style="width: 90%" alt="{queryName}" controls loop>
+		  <source id="videosource">
+		</video>
+	      {:else}
+		<video id="media" class="imgview" style="width: 90%" alt="{queryName}" controls>
+		  <source id="videosource">
+		</video>
+	      {/if}
 	  {/if}
 	{:else}
 	  loading...

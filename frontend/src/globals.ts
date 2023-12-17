@@ -4,8 +4,8 @@ export const FileType = {
 };
 
 // Configuration
-// export const serverUrl = "http://127.0.0.1:8080/api"; // local testing
-export const serverUrl = "api"; // Production
+export const serverUrl = "http://127.0.0.1:8080/api"; // local testing
+// export const serverUrl = "api"; // Production
 // export const serverUrl = "/api";
 export const defaultPlaySecs = 5;
 
@@ -13,6 +13,7 @@ export const emptyCfg = {
   sort: "name",
   reverse: false,
   raw: false,
+  loop: false,
   recursive: false,
   randSeed: 0,
 }
@@ -35,17 +36,18 @@ export function uiUrl(params) {
 
 
 export function cfg2str(cfg) {
-  return `${cfg.sort}-${cfg.reverse ? 1 : 0}-${cfg.raw ? 1 : 0}-${cfg.recursive ? 1 : 0}-${cfg.randSeed}`;
+  return `${cfg.sort}-${cfg.reverse ? 1 : 0}-${cfg.raw ? 1 : 0}-${cfg.loop ? 1 : 0}-${cfg.recursive ? 1 : 0}-${cfg.randSeed}`;
 }
 
 export function str2cfg(str) {
   let values = str.split("-");
-  let randSeed = parseInt(values[4], 10);
+  let randSeed = parseInt(values[5], 10);
   return {
     sort: values[0],
     reverse: values[1] === "0" ? false : true,
     raw: values[2] === "0" ? false : true,
-    recursive: values[3] === "0" ? false : true,
+    loop: values[3] === "0" ? false : true,
+    recursive: values[4] === "0" ? false : true,
     randSeed: isNaN(randSeed) ? 0 : randSeed,
   };
 }
