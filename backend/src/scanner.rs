@@ -31,6 +31,7 @@ use crate::state::Storage;
 pub const THUMB_SIZE: u16 = 512;
 pub const THUMB_QUALITY: u8 = 80;
 pub const MAX_SQL_TX_SIZE: usize = 1024;
+pub const THUMBS_CHUNK_SIZE: usize = 16;
 
 #[derive(Debug)]
 pub enum ScanError {
@@ -884,25 +885,44 @@ impl Indexer {
 
         // new_files -> gen thumb + set thumb + create SQL in image
         // update_files -> gen thumb + set thumb + update SQL in image
-        let index_req = IndexRequest {
-            new: files_cmp
-                .new
-                .iter()
-                .map(|name| {
-                    MediaThumb::new(&path, name, *(scan_files.get(name).expect("key found")))
+        let chunk_to_media_thumb = |names: &[&str]| {
+            names
+                .chunks(THUMBS_CHUNK_SIZE)
+                .map(|names| {
+                    names
+                        .iter()
+                        .map(|name| {
+                            MediaThumb::new(
+                                &path,
+                                *name,
+                                *(scan_files.get(name).expect("key found")),
+                            )
+                        })
+                        .collect::<Vec<_>>()
                 })
-                .collect(),
-            update: files_cmp
-                .update
-                .iter()
-                .map(|name| {
-                    MediaThumb::new(&path, name, *(scan_files.get(name).expect("key found")))
-                })
-                .collect(),
+                .collect::<Vec<_>>()
         };
-        match self.thumbs_req.0.send(index_req).await {
-            Ok(_) => {}
-            Err(_) => return Ok(()), // thumbs_req channel closed, we should terminate.
+        let mut index_reqs = Vec::with_capacity(
+            (files_cmp.new.len() + files_cmp.update.len()) / THUMBS_CHUNK_SIZE + 1,
+        );
+        // Chunk indexing requests to control memory usage
+        for req_new in chunk_to_media_thumb(&files_cmp.new).into_iter() {
+            index_reqs.push(IndexRequest {
+                new: req_new,
+                update: Vec::new(),
+            });
+        }
+        for req_update in chunk_to_media_thumb(&files_cmp.update).into_iter() {
+            index_reqs.push(IndexRequest {
+                new: Vec::new(),
+                update: req_update,
+            });
+        }
+        for index_req in index_reqs.into_iter() {
+            match self.thumbs_req.0.send(index_req).await {
+                Ok(_) => {}
+                Err(_) => return Ok(()), // thumbs_req channel closed, we should terminate.
+            }
         }
 
         // Recurse for each scan_dir.dirs
