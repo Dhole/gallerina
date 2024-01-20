@@ -14,6 +14,10 @@ mod scanner;
 mod state;
 mod utils;
 
+#[cfg(feature = "dhat-heap")]
+#[global_allocator]
+static ALLOC: dhat::Alloc = dhat::Alloc;
+
 // #[derive(Debug, Deserialize, Serialize)]
 // struct Image {
 //     pathfilename: String,
@@ -65,6 +69,23 @@ struct Args {
 
 #[async_std::main]
 async fn main() -> tide::Result<()> {
+    #[cfg(feature = "dhat-heap")]
+    static PROFILER: std::sync::OnceLock<std::sync::Mutex<Option<dhat::Profiler>>> =
+        std::sync::OnceLock::new();
+    #[cfg(feature = "dhat-heap")]
+    {
+        PROFILER
+            .set(std::sync::Mutex::new(Some(dhat::Profiler::new_heap())))
+            .unwrap();
+        ctrlc::set_handler(|| {
+            println!("Ctrl-C, dropping profiler...");
+            let profiler = PROFILER.get().unwrap().lock().unwrap().take();
+            drop(profiler);
+            std::process::exit(0);
+        })
+        .expect("Error setting Ctrl-C handler");
+    }
+
     env_logger::init();
     let args = Args::from_args();
     // tide::log::with_level(tide::log::LevelFilter::Info);

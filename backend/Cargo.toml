@@ -11,7 +11,7 @@ heed = "0.10.6"
 tide = "0.16.0"
 async-std = { version = "1.10.0", features = ["attributes"] }
 serde = { version = "1.0", features = ["derive"] }
-sqlx = { version = "0.6", features = ["sqlite", "chrono", "runtime-async-std-native-tls"] }
+sqlx = { version = "0.7.3", features = ["sqlite", "chrono", "runtime-async-std-native-tls"] }
 http-types = "2.12.0"
 percent-encoding = "2.1.0"
 url = { version = "2.2.2", features = ["serde"] }
@@ -25,10 +25,12 @@ async-lock = "2.4.0"
 parallel-stream = "2.1.3"
 awaitgroup = "0.6.0"
 num_cpus = "1.13.0"
-magick_rust = "0.19.1"
+magick_rust = { version = "0.19.1", features = ["disable-hdri"] }
 either = "1.6.1"
 futures-core = "0.3.17"
 async-stream = "0.3.2"
+dhat = { version = "0.3.2", optional = true }
+ctrlc = { version = "3.4", optional = true }
 
 # [patch.crates-io]
 # magick_rust = { git = "https://github.com/nlfiedler/magick-rust", rev = "2e843d7336cd435dbd57f77a42481e332d3fe4e6" }
@@ -37,3 +39,9 @@ async-stream = "0.3.2"
 [dev-dependencies]
 tempfile = "3.2.0"
 sha3 = "0.9.1"
+
+[profile.release]
+debug = 1
+
+[features]
+dhat-heap = [ "dep:dhat", "dep:ctrlc" ]

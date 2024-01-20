@@ -31,7 +31,7 @@ use crate::state::Storage;
 pub const THUMB_SIZE: u16 = 512;
 pub const THUMB_QUALITY: u8 = 80;
 pub const MAX_SQL_TX_SIZE: usize = 1024;
-pub const THUMBS_CHUNK_SIZE: usize = 16;
+pub const THUMBS_CHUNK_SIZE: usize = 32;
 
 #[derive(Debug)]
 pub enum ScanError {
@@ -325,7 +325,7 @@ where
         .unwrap_or_default()
         .to_string_lossy()
         .to_lowercase();
-    let thumb = if ext == "mp4" {
+    let thumb = if ext == "mp4" || ext == "gif" {
         ffmpeg::make_thumb(&*filepath.to_string_lossy())
     } else {
         magick::make_thumb(&*filepath.to_string_lossy()).map_err(|err| ThumbError::Magick(err))
@@ -887,18 +887,9 @@ impl Indexer {
         // update_files -> gen thumb + set thumb + update SQL in image
         let chunk_to_media_thumb = |names: &[&str]| {
             names
-                .chunks(THUMBS_CHUNK_SIZE)
-                .map(|names| {
-                    names
-                        .iter()
-                        .map(|name| {
-                            MediaThumb::new(
-                                &path,
-                                *name,
-                                *(scan_files.get(name).expect("key found")),
-                            )
-                        })
-                        .collect::<Vec<_>>()
+                .iter()
+                .map(|name| {
+                    MediaThumb::new(&path, *name, *(scan_files.get(name).expect("key found")))
                 })
                 .collect::<Vec<_>>()
         };
@@ -906,16 +897,16 @@ impl Indexer {
             (files_cmp.new.len() + files_cmp.update.len()) / THUMBS_CHUNK_SIZE + 1,
         );
         // Chunk indexing requests to control memory usage
-        for req_new in chunk_to_media_thumb(&files_cmp.new).into_iter() {
+        for req_new in files_cmp.new.chunks(THUMBS_CHUNK_SIZE) {
             index_reqs.push(IndexRequest {
-                new: req_new,
+                new: chunk_to_media_thumb(req_new),
                 update: Vec::new(),
             });
         }
-        for req_update in chunk_to_media_thumb(&files_cmp.update).into_iter() {
+        for req_update in files_cmp.update.chunks(THUMBS_CHUNK_SIZE) {
             index_reqs.push(IndexRequest {
                 new: Vec::new(),
-                update: req_update,
+                update: chunk_to_media_thumb(req_update),
             });
         }
         for index_req in index_reqs.into_iter() {

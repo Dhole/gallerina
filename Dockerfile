@@ -8,8 +8,8 @@ RUN apt-get update \
 ENV MAGICK_VERSION 7.1
 
 WORKDIR /magick
-RUN curl https://download.imagemagick.org/archive/ImageMagick.tar.gz | tar xz
-# RUN curl  https://download.imagemagick.org/archive/ImageMagick-7.1.1-23.tar.gz| tar xz
+# RUN curl https://download.imagemagick.org/archive/ImageMagick.tar.gz | tar xz
+RUN curl https://download.imagemagick.org/archive/releases/ImageMagick-7.1.1-23.tar.gz | tar xz
 RUN cd ImageMagick-${MAGICK_VERSION}* \
  && ./configure --with-magick-plus-plus=no --with-perl=no \
  && make -j 4 \

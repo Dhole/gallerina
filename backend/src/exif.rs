@@ -82,19 +82,17 @@ impl Error for ExifDateTimeError {}
 pub fn exif_to_datetime(dt: &exif::DateTime) -> Result<DateTime<Utc>, Box<dyn Error>> {
     // Option B
     let tz = FixedOffset::east_opt(dt.offset.unwrap_or(0) as i32 * 60).ok_or(ExifDateTimeError)?;
-    Ok(
-        match Utc.ymd_opt(dt.year as i32, dt.month as u32, dt.day as u32) {
-            LocalResult::Single(d) => d
-                .and_hms_nano_opt(
-                    dt.hour as u32,
-                    dt.minute as u32,
-                    dt.second as u32,
-                    dt.nanosecond.unwrap_or(0),
-                )
-                .ok_or(ExifDateTimeError)?,
-            _ => return Err(Box::new(ExifDateTimeError)),
-        } - tz,
-    )
+    Ok(match Utc.with_ymd_and_hms(
+        dt.year as i32,
+        dt.month as u32,
+        dt.day as u32,
+        dt.hour as u32,
+        dt.minute as u32,
+        dt.second as u32,
+    ) {
+        LocalResult::Single(d) => d,
+        _ => return Err(Box::new(ExifDateTimeError)),
+    } - tz)
 }
 
 pub fn exif_field_to_datetime(field: &exif::Field) -> Result<DateTime<Utc>, Box<dyn Error>> {

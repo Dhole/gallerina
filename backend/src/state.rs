@@ -82,7 +82,7 @@ impl<'a> Storage {
             );
             "#,
         )
-        .execute(&mut tx)
+        .execute(&mut *tx)
         .await?;
 
         sqlx::query(
@@ -97,17 +97,17 @@ impl<'a> Storage {
             );
             "#,
         )
-        .execute(&mut tx)
+        .execute(&mut *tx)
         .await?;
 
         sqlx::query("CREATE INDEX IF NOT EXISTS dir_index ON image (dir);")
-            .execute(&mut tx)
+            .execute(&mut *tx)
             .await?;
 
         sqlx::query(
             r#"INSERT OR IGNORE INTO folder (path, name, dir, mtime) VALUES ("/", ".", NULL, 0);"#,
         )
-        .execute(&mut tx)
+        .execute(&mut *tx)
         .await?;
 
         tx.commit().await?;
@@ -224,11 +224,11 @@ pub struct StateConfig<'a> {
 async fn db_connection(url: &str, lib_dir: &PathBuf) -> Result<SqlitePool, sqlx::Error> {
     let mut hash_path = lib_dir.clone();
     hash_path.push("hash");
-    let mut opts = SqliteConnectOptions::from_str(url)?
+    let opts = SqliteConnectOptions::from_str(url)?
         .serialized(true)
         .busy_timeout(Duration::from_secs(3600))
-        .extension(hash_path.as_path().to_string_lossy().to_string());
-    opts.log_statements(LevelFilter::Debug)
+        .extension(hash_path.as_path().to_string_lossy().to_string())
+        .log_statements(LevelFilter::Debug)
         .log_slow_statements(LevelFilter::Warn, Duration::from_millis(800));
     Ok(SqlitePool::connect_with(opts).await?)
 }
