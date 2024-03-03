@@ -14,14 +14,32 @@ pub fn make_thumb(path: &str) -> Result<Vec<u8>, MagickError> {
 
     let mut wand = MagickWand::new();
     wand.read_image(path)?;
-    let (width, height) = (wand.get_image_width(), wand.get_image_height());
+    let (mut width, mut height) = (wand.get_image_width(), wand.get_image_height());
+    if width == 0 {
+        log::warn!("width=0 in {}", path);
+        width = 16;
+    }
+    if height == 0 {
+        log::warn!("width=0 in {}", path);
+        height = 16;
+    }
     let width_ratio = THUMB_SIZE as f64 / width as f64;
     let height_ratio = THUMB_SIZE as f64 / height as f64;
-    let (new_width, new_height) = if width_ratio < height_ratio {
+    let (mut new_width, mut new_height) = if width_ratio < height_ratio {
         (THUMB_SIZE as usize, (height as f64 * width_ratio) as usize)
     } else {
         ((width as f64 * height_ratio) as usize, THUMB_SIZE as usize)
     };
+    if new_width == 0 || new_height == 0 {
+        log::warn!(
+            "Invalid thumb size {:?} from {:?} in {}",
+            (width, height),
+            (new_width, new_height),
+            path
+        );
+        new_width = 16;
+        new_height = 16;
+    }
     wand.set_image_compression_quality(THUMB_QUALITY as usize)?;
 
     let orientation = wand.get_image_orientation();

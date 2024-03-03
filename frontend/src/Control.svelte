@@ -47,7 +47,7 @@
     if (s === null) {
       return s;
     }
-    let dateRe = RegExp(/([^T]+)T([^.]+)\..*(\+.+)/mg);
+    let dateRe = RegExp(/([^T]+)T([^.]+)\.[0-9]*(.+)/mg);
     let match = dateRe.exec(s);
     return match[1] + ' ' + match[2] + match[3];
   }
