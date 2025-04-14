@@ -29,7 +29,7 @@ use crate::state::Storage;
 // use crate::utils::MediaType::*;
 
 pub const THUMB_SIZE: u16 = 512;
-pub const THUMB_QUALITY: u8 = 80;
+pub const THUMB_QUALITY: u8 = 70; // WEBP
 pub const MAX_SQL_TX_SIZE: usize = 1024;
 pub const THUMBS_CHUNK_SIZE: usize = 32;
 
@@ -255,6 +255,7 @@ impl Scanner {
 
 pub enum MediaType {
     Jpeg,
+    JXL,
     Gif,
     Png,
     Webp,
@@ -279,6 +280,7 @@ pub fn is_media(path: &Path) -> Result<Option<MediaType>, IsMediaError> {
     let ext = match ext.as_str() {
         "jpg" => Jpeg,
         "jpeg" => Jpeg,
+        "jxl" => JXL,
         "jpe" => Jpeg,
         "gif" => Gif,
         "webp" => Webp,

@@ -126,6 +126,7 @@ async fn main() -> tide::Result<()> {
         .get(routes::get_folder_recursive);
     app.at("/api/thumb").get(routes::get_thumb);
     app.at("/api/src/:name").get(routes::get_src);
+    app.at("/api/raw/:name").get(routes::get_raw);
     app.at("/api/status").get(routes::get_status);
     app.at("/api/scanner/run").post(routes::post_scan_run);
     app.at("/api/scanner/stop").post(routes::post_scan_stop);

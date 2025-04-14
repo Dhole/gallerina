@@ -1,3 +1,5 @@
+use async_std::fs::File;
+use async_std::prelude::*;
 use http_types::mime::Mime;
 use percent_encoding::percent_decode_str;
 use std::error::Error;
@@ -7,8 +9,9 @@ use std::str::FromStr;
 use tide::Body;
 use tide::Response;
 
+use crate::magick;
 use crate::models::{queries, responses};
-use crate::scanner;
+use crate::scanner::{self, MediaType};
 use crate::state;
 
 const HEADER_CACHE_KEY: &str = "Cache-Control";
@@ -76,7 +79,7 @@ pub async fn get_folder_recursive(req: Request) -> tide::Result<Body> {
 pub async fn get_thumb(req: Request) -> tide::Result<Response> {
     let query: queries::ThumbQuery = req.query()?;
     let mut body = Body::from_bytes(req.state().storage.thumb(&query.path)?);
-    body.set_mime(Mime::from_str("image/jpeg").expect("Mime image/jpeg"));
+    body.set_mime(Mime::from_str("image/webp").expect("Mime image/webp"));
 
     let mut res = Response::new(200);
     res.set_body(body);
@@ -97,7 +100,8 @@ impl fmt::Display for QueryError {
 
 impl Error for QueryError {}
 
-pub async fn get_src(req: Request) -> tide::Result<Response> {
+// Helper function to read the file from a get request used in `get_src` and `get_raw`
+async fn helper_get_file(req: Request) -> tide::Result<(String, Vec<u8>)> {
     let name = &*percent_decode_str(req.param("name")?).decode_utf8_lossy();
     let query: queries::SrcQuery = req.query()?;
     let root = req.state().storage.root().clone();
@@ -108,8 +112,43 @@ pub async fn get_src(req: Request) -> tide::Result<Response> {
         return Err(http_types::Error::new(400, QueryError::PathOutOfRoot));
     }
 
+    let mut file = File::open(path).await?;
+    let mut buf = Vec::new();
+    file.read_to_end(&mut buf).await?;
+    Ok((name.to_string(), buf))
+}
+
+// reencode some formats into web-friendly ones
+pub async fn get_src(req: Request) -> tide::Result<Response> {
+    let (name, mut buf) = helper_get_file(req).await?;
+    // TODO: Error proper handling
+    let media_type = scanner::is_media(&Path::new(&name)).unwrap().unwrap();
+    let mime = match media_type {
+        MediaType::JXL => {
+            buf = magick::convert_to_webp(&buf)?;
+            Mime::from_str("image/jxl;charset=utf-8").unwrap()
+        }
+        _ => Mime::sniff(&buf)?,
+    };
+
+    let mut body = Body::from_bytes(buf);
+    body.set_mime(mime);
+
     let mut res = Response::new(200);
-    res.set_body(Body::from_file(path).await?);
+    res.set_body(body);
+    res.insert_header(HEADER_CACHE_KEY, HEADER_CACHE_VALUE);
+    Ok(res)
+}
+
+// get the original file without reencoding
+pub async fn get_raw(req: Request) -> tide::Result<Response> {
+    let (_, buf) = helper_get_file(req).await?;
+    let mime = Mime::sniff(&buf)?;
+    let mut body = Body::from_bytes(buf);
+    body.set_mime(mime);
+
+    let mut res = Response::new(200);
+    res.set_body(body);
     res.insert_header(HEADER_CACHE_KEY, HEADER_CACHE_VALUE);
     Ok(res)
 }

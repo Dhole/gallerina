@@ -10,7 +10,7 @@ Gallerina is a simple self-hosted photo gallery with a focus on performance.
 
 # Features
 
-- Supports multiple image formats: `JPEG`, `PNG`, `GIF`.
+- Supports multiple image formats: `JPEG`, `JXL`, `PNG`, `webp`, `GIF`.
 - Support video file formats: `MP4`.
 - Parsing of EXIF metadata to index photos by taken date.
 - Sorting by: name, file modification date, taken date (EXIF) and random.

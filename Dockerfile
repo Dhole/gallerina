@@ -3,14 +3,14 @@
 FROM rust:1.75-bullseye as build-rust
 
 RUN apt-get update \
- && apt-get -y install curl build-essential clang pkg-config libjpeg-turbo-progs libpng-dev libssl-dev
+ && apt-get -y install curl build-essential clang pkg-config libjpeg-turbo-progs libpng-dev libavif-dev libheif-dev libssl-dev
 
 ENV MAGICK_VERSION 7.1
 
 WORKDIR /magick
 # RUN curl https://download.imagemagick.org/archive/ImageMagick.tar.gz | tar xz
 # RUN curl https://download.imagemagick.org/archive/releases/ImageMagick-7.1.1-23.tar.gz | tar xz
-RUN curl https://download.imagemagick.org/archive/releases/ImageMagick-7.1.1-26.tar.gz | tar xz
+RUN curl https://download.imagemagick.org/archive/releases/ImageMagick-7.1.1-42.tar.xz | tar xJ
 RUN cd ImageMagick-${MAGICK_VERSION}* \
  && ./configure --with-magick-plus-plus=no --with-perl=no \
  && make -j 4 \
@@ -35,7 +35,7 @@ RUN apt-get update \
  && apt-get -y install libx11-6 libgomp1 libjbig0 liblcms2-2 libtiff5 \
                        liblqr-1-0 libpng16-16 libdjvulibre21 libfontconfig1 \
                        libwebpmux3 libwebpdemux2 libxext6  libopenexr25 \
-                       libopenjp2-7 libssl1.1 ffmpeg \
+                       libopenjp2-7 libheif1 libssl1.1 ffmpeg \
  && rm -rfv /var/lib/apt/lists/*
 COPY --from=build-rust /usr/local/lib /usr/local/lib
 ENV LD_LIBRARY_PATH=/usr/local/lib

@@ -54,5 +54,28 @@ pub fn make_thumb(path: &str) -> Result<Vec<u8>, MagickError> {
         }
     };
     wand.thumbnail_image(new_width, new_height);
-    wand.write_image_blob("jpeg")
+    wand.write_image_blob("webp")
+}
+
+pub fn convert_to_webp(buf: &[u8]) -> Result<Vec<u8>, MagickError> {
+    START.call_once(|| {
+        magick_wand_genesis();
+    });
+
+    let mut wand = MagickWand::new();
+    wand.read_image_blob(buf)?;
+    wand.set_image_compression_quality(95)?;
+
+    // let orientation = wand.get_image_orientation();
+    // let (new_width, new_height) = match orientation {
+    //     1 => (new_width, new_height),
+    //     o => {
+    //         wand.auto_orient();
+    //         match o {
+    //             6 | 8 | 5 | 7 => (new_height, new_width),
+    //             _ => (new_width, new_height),
+    //         }
+    //     }
+    // };
+    wand.write_image_blob("webp")
 }

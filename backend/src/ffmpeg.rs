@@ -18,6 +18,8 @@ pub fn make_thumb(path: &str) -> Result<Vec<u8>, ThumbError> {
         .arg(vf_arg.as_str())
         .arg("-frames:v")
         .arg("1")
+        .arg("-c:v")
+        .arg("webp")
         .arg("-f")
         .arg("image2pipe")
         .arg("-")
