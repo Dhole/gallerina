@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:experimental
 
-FROM rust:1.75-bullseye as build-rust
+FROM rust:1.86-bullseye as build-rust
 
 RUN apt-get update \
  && apt-get -y install curl build-essential clang pkg-config libjpeg-turbo-progs libpng-dev libavif-dev libheif-dev libssl-dev
