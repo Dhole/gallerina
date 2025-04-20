@@ -107,6 +107,7 @@ async fn main() -> tide::Result<()> {
     .await?;
     let mut app = tide::with_state(state);
 
+    app.with(tide::log::LogMiddleware::new());
     app.with(
         CorsMiddleware::new()
             .allow_methods("GET, POST, OPTIONS".parse::<HeaderValue>().unwrap())

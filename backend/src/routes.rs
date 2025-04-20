@@ -6,8 +6,7 @@ use std::error::Error;
 use std::fmt;
 use std::path::Path;
 use std::str::FromStr;
-use tide::Body;
-use tide::Response;
+use tide::{Body, Redirect, Response};
 
 use crate::magick;
 use crate::models::{queries, responses};
@@ -100,35 +99,57 @@ impl fmt::Display for QueryError {
 
 impl Error for QueryError {}
 
-// Helper function to read the file from a get request used in `get_src` and `get_raw`
-async fn helper_get_file(req: Request) -> tide::Result<(String, Vec<u8>)> {
+// Helper function to get the noramlized file path from a get request used in `get_src` and
+// `get_raw`
+async fn helper_get_path(req: &Request) -> tide::Result<String> {
     let name = &*percent_decode_str(req.param("name")?).decode_utf8_lossy();
     let query: queries::SrcQuery = req.query()?;
     let root = req.state().storage.root().clone();
     let mut path = root.join(Path::new(query.dir.strip_prefix('/').unwrap_or(&query.dir)));
     path.push(name);
-    let path = path.canonicalize()?;
+    let path = path.canonicalize().unwrap_or(path);
     if !path.starts_with(root) {
         return Err(http_types::Error::new(400, QueryError::PathOutOfRoot));
     }
+    Ok(path.to_string_lossy().to_string())
+}
 
-    let mut file = File::open(path).await?;
-    let mut buf = Vec::new();
-    file.read_to_end(&mut buf).await?;
-    Ok((name.to_string(), buf))
+fn redirect_url_webp(url: &str) -> String {
+    let query_index = url.find('?').unwrap();
+    let mut new_url = String::new();
+    new_url.push_str(&url[..query_index]);
+    new_url.push_str(".re.webp");
+    new_url.push_str(&url[query_index..]);
+    new_url
 }
 
 // reencode some formats into web-friendly ones
 pub async fn get_src(req: Request) -> tide::Result<Response> {
-    let (name, mut buf) = helper_get_file(req).await?;
-    // TODO: Error proper handling
-    let media_type = scanner::is_media(&Path::new(&name)).unwrap().unwrap();
-    let mime = match media_type {
+    let path = helper_get_path(&req).await?;
+
+    let media_type = scanner::is_media(&Path::new(&path)).unwrap().unwrap();
+    match media_type {
         MediaType::JXL => {
-            buf = magick::convert_to_webp(&buf)?;
-            Mime::from_str("image/jxl;charset=utf-8").unwrap()
+            let new_url = redirect_url_webp(req.url().as_str());
+            return Ok(Redirect::new(new_url).into());
         }
-        _ => Mime::sniff(&buf)?,
+        _ => {}
+    };
+
+    let (path, reencode_webp) = if let Some(stripped) = path.strip_suffix(".re.webp") {
+        (stripped.to_string(), true)
+    } else {
+        (path, false)
+    };
+
+    let mut file = File::open(path).await?;
+    let mut buf = Vec::new();
+    file.read_to_end(&mut buf).await?;
+    let mime = if reencode_webp {
+        buf = magick::convert_to_webp(&buf)?;
+        Mime::from_str("image/webp").unwrap()
+    } else {
+        Mime::sniff(&buf)?
     };
 
     let mut body = Body::from_bytes(buf);
@@ -142,7 +163,11 @@ pub async fn get_src(req: Request) -> tide::Result<Response> {
 
 // get the original file without reencoding
 pub async fn get_raw(req: Request) -> tide::Result<Response> {
-    let (_, buf) = helper_get_file(req).await?;
+    let path = helper_get_path(&req).await?;
+    let mut file = File::open(path).await?;
+    let mut buf = Vec::new();
+    file.read_to_end(&mut buf).await?;
+
     let mime = Mime::sniff(&buf)?;
     let mut body = Body::from_bytes(buf);
     body.set_mime(mime);
