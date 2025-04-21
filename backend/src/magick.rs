@@ -64,7 +64,8 @@ pub fn convert_to_webp(buf: &[u8]) -> Result<Vec<u8>, MagickError> {
 
     let mut wand = MagickWand::new();
     wand.read_image_blob(buf)?;
-    wand.set_image_compression_quality(95)?;
+    wand.set_image_compression_quality(85)?;
+    wand.set_option("webp:method", "4")?;
 
     // let orientation = wand.get_image_orientation();
     // let (new_width, new_height) = match orientation {

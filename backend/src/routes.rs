@@ -7,6 +7,7 @@ use std::fmt;
 use std::path::Path;
 use std::str::FromStr;
 use tide::{Body, Redirect, Response};
+use url::Url;
 
 use crate::magick;
 use crate::models::{queries, responses};
@@ -114,13 +115,11 @@ async fn helper_get_path(req: &Request) -> tide::Result<String> {
     Ok(path.to_string_lossy().to_string())
 }
 
-fn redirect_url_webp(url: &str) -> String {
-    let query_index = url.find('?').unwrap();
-    let mut new_url = String::new();
-    new_url.push_str(&url[..query_index]);
-    new_url.push_str(".re.webp");
-    new_url.push_str(&url[query_index..]);
-    new_url
+fn redirect_url_webp(url_str: &str) -> String {
+    let url = Url::parse(url_str).unwrap();
+    let path = url.path();
+    let query = url.query().unwrap();
+    format!("{}.re.webp?{}", path, query)
 }
 
 // reencode some formats into web-friendly ones
