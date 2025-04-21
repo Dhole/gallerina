@@ -33,6 +33,7 @@ pub const THUMB_QUALITY: u8 = 70; // WEBP
 pub const MAX_SQL_TX_SIZE: usize = 1024;
 pub const THUMBS_CHUNK_SIZE: usize = 32;
 
+#[allow(unused)]
 #[derive(Debug)]
 pub enum ScanError {
     Io(PathBuf, io::Error),
@@ -291,6 +292,7 @@ pub fn is_media(path: &Path) -> Result<Option<MediaType>, IsMediaError> {
     Ok(Some(ext))
 }
 
+#[allow(unused)]
 #[derive(Debug)]
 pub enum ThumbError {
     IsMediaError(IsMediaError),

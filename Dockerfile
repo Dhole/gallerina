@@ -1,9 +1,9 @@
 # syntax=docker/dockerfile:experimental
 
-FROM rust:1.86-bullseye as build-rust
+FROM rust:1.86-bookworm as build-rust
 
 RUN apt-get update \
- && apt-get -y install curl build-essential clang pkg-config libjpeg-turbo-progs libpng-dev libavif-dev libheif-dev libssl-dev
+ && apt-get -y install curl build-essential clang pkg-config libjpeg-turbo-progs libpng-dev libavif-dev libheif-dev libssl-dev libjxl-dev
 
 ENV MAGICK_VERSION 7.1
 
@@ -29,13 +29,13 @@ RUN --mount=type=cache,sharing=locked,id=cargotarget,target=/frontend/node_modul
 COPY frontend .
 RUN --mount=type=cache,sharing=locked,id=cargotarget,target=/frontend/node_modules npm run build
 
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim
 
 RUN apt-get update \
- && apt-get -y install libx11-6 libgomp1 libjbig0 liblcms2-2 libtiff5 \
+ && apt-get -y install libx11-6 libgomp1 libjbig0 liblcms2-2 libtiff6 \
                        liblqr-1-0 libpng16-16 libdjvulibre21 libfontconfig1 \
-                       libwebpmux3 libwebpdemux2 libxext6  libopenexr25 \
-                       libopenjp2-7 libheif1 libssl1.1 ffmpeg \
+                       libwebpmux3 libwebpdemux2 libxext6  libopenexr-3-1-30 \
+                       libopenjp2-7 libheif1 libssl3 ffmpeg \
  && rm -rfv /var/lib/apt/lists/*
 COPY --from=build-rust /usr/local/lib /usr/local/lib
 ENV LD_LIBRARY_PATH=/usr/local/lib

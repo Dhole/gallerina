@@ -15,6 +15,7 @@ use std::time::Duration;
 use crate::models::{queries, views};
 use crate::scanner::Scanner;
 
+#[allow(unused)]
 #[derive(Debug)]
 pub enum ThumbError {
     Heed(heed::Error),
@@ -233,6 +234,7 @@ async fn db_connection(url: &str, lib_dir: &PathBuf) -> Result<SqlitePool, sqlx:
     Ok(SqlitePool::connect_with(opts).await?)
 }
 
+#[allow(unused)]
 #[derive(Debug)]
 pub enum StateNewError {
     Heed(heed::Error),
