@@ -57,15 +57,19 @@ pub fn make_thumb(path: &str) -> Result<Vec<u8>, MagickError> {
     wand.write_image_blob("webp")
 }
 
-pub fn convert_to_webp(buf: &[u8]) -> Result<Vec<u8>, MagickError> {
+pub fn convert_to_webp(
+    buf: &[u8],
+    quality: usize,
+    compression: usize,
+) -> Result<Vec<u8>, MagickError> {
     START.call_once(|| {
         magick_wand_genesis();
     });
 
     let mut wand = MagickWand::new();
     wand.read_image_blob(buf)?;
-    wand.set_image_compression_quality(85)?;
-    wand.set_option("webp:method", "4")?;
+    wand.set_image_compression_quality(quality)?;
+    wand.set_option("webp:method", compression.to_string().as_str())?;
 
     // let orientation = wand.get_image_orientation();
     // let (new_width, new_height) = match orientation {

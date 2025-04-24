@@ -209,7 +209,14 @@ impl<'a> Storage {
 pub struct State {
     pub storage: Storage,
     pub scanner: Arc<Scanner>,
+    pub cfg: Config,
     // pub stats: Arc<RwLock<Stats>>, // TODO: Put under Arc Mutex
+}
+
+#[derive(Debug, Clone)]
+pub struct Config {
+    pub webp_quality: usize,
+    pub webp_compression: usize,
 }
 
 #[derive(Debug)]
@@ -220,6 +227,8 @@ pub struct StateConfig<'a> {
     pub root: &'a PathBuf,
     pub n_threads: usize,
     pub page_size: usize,
+    pub webp_quality: usize,
+    pub webp_compression: usize,
 }
 
 async fn db_connection(url: &str, lib_dir: &PathBuf) -> Result<SqlitePool, sqlx::Error> {
@@ -274,6 +283,10 @@ impl<'a> State {
         Ok(Self {
             storage: storage.clone(),
             scanner: Arc::new(Scanner::new(storage, cfg.n_threads)),
+            cfg: Config {
+                webp_quality: cfg.webp_quality,
+                webp_compression: cfg.webp_compression,
+            }
             // stats: Arc::new(RwLock::new(Stats::new())),
         })
     }

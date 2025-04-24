@@ -12,7 +12,7 @@ use url::Url;
 use crate::magick;
 use crate::models::{queries, responses};
 use crate::scanner::{self, MediaType};
-use crate::state;
+use crate::state::{self, Config};
 
 const HEADER_CACHE_KEY: &str = "Cache-Control";
 const HEADER_CACHE_VALUE: &str = "max-age=3600";
@@ -145,7 +145,12 @@ pub async fn get_src(req: Request) -> tide::Result<Response> {
     let mut buf = Vec::new();
     file.read_to_end(&mut buf).await?;
     let mime = if reencode_webp {
-        buf = magick::convert_to_webp(&buf)?;
+        let Config {
+            webp_quality,
+            webp_compression,
+            ..
+        } = req.state().cfg;
+        buf = magick::convert_to_webp(&buf, webp_quality, webp_compression)?;
         Mime::from_str("image/webp").unwrap()
     } else {
         Mime::sniff(&buf)?

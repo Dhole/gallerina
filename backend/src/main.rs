@@ -65,6 +65,14 @@ struct Args {
     /// Number of images per page
     #[structopt(long = "page_size", default_value = "4096")]
     page_size: usize,
+
+    /// webp compression quality, from 0 to 100
+    #[structopt(long = "webp_quality", default_value = "85")]
+    webp_quality: usize,
+
+    /// webp compression speed/size, from 0 to 6
+    #[structopt(long = "webp_compression", default_value = "4")]
+    webp_compression: usize,
 }
 
 #[async_std::main]
@@ -95,25 +103,29 @@ async fn main() -> tide::Result<()> {
     } else {
         args.threads
     };
+    assert!(args.webp_quality <= 100);
+    assert!(args.webp_compression <= 6);
 
     let state = state::State::new(&state::StateConfig {
         path_sqlite: &args.sqlite,
         lib_dir: &args.lib_dir.unwrap_or(PathBuf::from("./lib")),
         path_mdb: &args.mdb,
         root: &args.root,
-        n_threads: n_threads,
+        n_threads,
         page_size: args.page_size,
+        webp_quality: args.webp_quality,
+        webp_compression: args.webp_compression,
     })
     .await?;
     let mut app = tide::with_state(state);
 
-    app.with(tide::log::LogMiddleware::new());
     app.with(
         CorsMiddleware::new()
             .allow_methods("GET, POST, OPTIONS".parse::<HeaderValue>().unwrap())
             .allow_origin(Origin::from("*"))
             .allow_credentials(false),
     );
+    app.with(tide::log::LogMiddleware::new());
 
     if let Some(static_dir) = args.static_dir {
         let mut index = static_dir.clone();
