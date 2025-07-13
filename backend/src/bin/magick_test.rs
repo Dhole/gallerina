@@ -13,6 +13,7 @@ fn main() {
     let mut file = File::open(path).unwrap();
     let mut buf = Vec::new();
     file.read_to_end(&mut buf).unwrap();
-    backend::magick::convert_to_webp(&buf, 85, 4).unwrap();
-    println!("{}", buf[0]);
+    let buf = backend::magick::convert_to_webp(&buf, 85, 4).unwrap();
+    std::io::stdout().write_all(&buf).unwrap();
+    // println!("{}", buf[0]);
 }

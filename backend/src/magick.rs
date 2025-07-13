@@ -70,7 +70,7 @@ pub fn convert_to_webp(
     wand.read_image_blob(buf)?;
     wand.set_image_compression_quality(quality)?;
     wand.set_option("webp:method", compression.to_string().as_str())?;
-
+    wand.auto_orient();
     // let orientation = wand.get_image_orientation();
     // let (new_width, new_height) = match orientation {
     //     1 => (new_width, new_height),
