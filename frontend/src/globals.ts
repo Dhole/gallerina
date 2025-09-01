@@ -4,7 +4,7 @@ export const FileType = {
 };
 
 // Configuration
-// export const serverUrl = "http://127.0.0.1:8080/api"; // local testing
+// export const serverUrl = "http://localhost:8080/api"; // local testing
 export const serverUrl = "api"; // Production
 // export const serverUrl = "/api";
 export const defaultPlaySecs = 5;

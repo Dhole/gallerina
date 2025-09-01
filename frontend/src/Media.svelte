@@ -508,7 +508,7 @@
 	    <img id="media" class="imgview" alt="{queryName}">
 	  {:else}
 	      {#if queryCfg.loop}
-		<video id="media" class="imgview" style="width: 90%" alt="{queryName}" controls loop>
+		<video id="media" class="imgview" style="width: 90%" alt="{queryName}" controls autoplay loop>
 		  <source id="videosource">
 		</video>
 	      {:else}
